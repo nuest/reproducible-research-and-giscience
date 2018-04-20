@@ -18,10 +18,16 @@ In RStudio, select "Knit > Knit to PDF" to render the document. You may use othe
 
 ![](binder-screenshot-02.png)
 
-For the analysis to complete you have to complete two crucial steps:
+Then open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
 
-- Add a Springer API key
-- Add data to workspace
+For all analysis code to work you have to complete two prerequisite steps as described in the main analysis file:
+
+- Configure a Springer API key
+- Upload data to the workspace
+
+Wihtout data and API key, only some figures can be reproduced.
+
+![](binder-screenshot-03.png)
 
 ## Files in this repository
 
