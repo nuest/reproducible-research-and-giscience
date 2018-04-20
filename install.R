@@ -1,0 +1,6 @@
+install.packages("pdftools")
+install.packages("tidytext")
+install.packages("wordcloud")
+install.packages("ggthemes")
+install.packages("kableExtra")
+install.packages("huxtable")
