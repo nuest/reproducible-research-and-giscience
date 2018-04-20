@@ -1,0 +1,803 @@
+---
+title: 'Analysis and visualisations for "Reproducible research and GIScience: an evaluation using AGILE conference papers"'
+author: "Daniel Nüst, Barbara Hofer"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    keep_tex: yes
+    latex_engine: xelatex
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
+  word_document:
+    toc: yes
+urlcolor: blue
+---
+
+## License
+
+This document is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
+
+All contained code is licensed under the [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/).
+
+The data used is licensed under a [Open Data Commons Attribution License](https://opendatacommons.org/licenses/by/).
+
+\newpage
+
+## Metadata
+
+Required libraries and runtime environment description.
+
+```{r load_libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library("pdftools")
+library("stringr")
+library("tidyverse")
+library("knitr")
+library("tidytext")
+library("wordcloud")
+library("RColorBrewer")
+library("readr")
+library("ggplot2")
+library("rvest")
+library("jsonlite")
+library("reshape2")
+library("ggthemes")
+library("gridExtra")
+library("grid")
+library("kableExtra")
+library("devtools")
+library("rlang")
+library("huxtable")
+```
+
+```{r session_info}
+devtools::session_info(include_base = TRUE)
+```
+
+This document is versioned in a private [git](https://git-scm.com/) repository and the current build is `r system2("git", "rev-parse --short HEAD", stdout = TRUE, stderr = TRUE)`.
+
+\newpage
+
+## Prerequisites
+
+An API key is needed for accessing the [Springer API](https://dev.springer.com/) to automatically retrieve the number of full papers.
+Create a file `.Renviron` next to this document and add the following line:
+
+```{r,eval=FALSE}
+SPRINGER_API_KEY=<your key>
+```
+
+```{r check_api_key}
+if (is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA)))
+  stop("API key is not set, please check the section \"Prerequisites\" of the Rmd file.")
+```
+
+## Instructions
+
+To create the PDF of the reproducibility package from this document you can run the following commands.
+
+```{r render_with_rmarkdown,eval=FALSE}
+require("knitr")
+require("rmarkdown")
+rmarkdown::render("agile-rr-paper-corpus.Rmd",
+                  output_format = pdf_document(latex_engine = "xelatex"))
+```
+
+\newpage
+
+## Paper corpus: loading and cleaning
+
+The test dataset for the AGILE RR publication is available in a privately shared online folder.
+It comprises all nominees for the best paper award since 2008, both short papers and full papers.
+
+```{r}
+data_path <- "paper-corpus"
+files <- dir(path = data_path, pattern = ".pdf$", full.names = TRUE)
+```
+
+This analysis was created with the following `r length(files)` documents, `r length(which(grepl("shortpaper", files)))` of which are short papers:
+
+```{r, echo=FALSE}
+files
+```
+
+Read the data from PDFs and preprocess to create a [tidy](https://www.jstatsoft.org/article/view/v059i10) data structure without [stop words](https://en.wikipedia.org/wiki/Stop_words):
+
+```{r tidy_data}
+texts <- lapply(files, pdf_text)
+texts <- unlist(lapply(texts, str_c, collapse = TRUE))
+infos <- lapply(files, pdf_info)
+
+tidy_texts <- tibble(id = str_extract(files, "[0-9]+"),
+                     file = files,
+                     text = texts,
+                     pages = map_chr(infos, function(info) {info$pages}))
+
+papers_words <- tidy_texts %>%
+  select(file,
+         text) %>%
+  unnest_tokens(word, text)
+
+my_stop_words <- tibble(
+  word = c(
+    "et",
+    "al",
+    "fig",
+    "e.g",
+    "i.e",
+    "http",
+    "ing",
+    "pp",
+    "figure",
+    "based"
+  ),
+  lexicon = "agile"
+)
+all_stop_words <- stop_words %>%
+  bind_rows(my_stop_words)
+
+suppressWarnings({
+  no_numbers <- papers_words %>%
+    filter(is.na(as.numeric(word)))
+})
+no_stop_words <- no_numbers %>%
+  anti_join(all_stop_words, by = "word") %>%
+  mutate(id = str_extract(file, "[0-9]+"))
+```
+
+```{r calculate_stopword_stats, echo=FALSE}
+total_words = nrow(papers_words)
+after_cleanup = nrow(no_stop_words)
+```
+
+About `r round(after_cleanup/total_words * 100)` % of the words are considered stop words.
+
+\newpage
+
+_How many non-stop words does each document have?_
+
+```{r stop_words}
+kable(no_stop_words %>%
+  group_by(id) %>%
+  summarise(words = n()) %>%
+  arrange(desc(words)))
+```
+
+**Note:** There was an issue with reading in one paper, which only had 15 words. Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) with the command `docker run -v $(pwd)/paper-corpus:/home/docker -it jbarlow83/ocrmypdf-tess4 --force-ocr 22015_Mazimpaka_Timpf_AGILE.pdf 22015_Mazimpaka_Timpf_AGILE_ocr.pdf` and the created file was used instead of the original.
+
+\newpage
+
+## Table: Reproducible research-related keywords in the corpus
+
+_How often do the following terms appear in each paper?_
+
+The detection matches full words using regex option `\b`.
+
+- reproduc (``, reproducibility, reproducible, reproduce, reproduction)
+- replic (`replicat.*`, i.e. replication, replicate)
+- repeatab (`repeatab.*`, i.e. repeatability, repeatable)
+- software
+- (pseudo) code/script(s) [column name _code_]
+- algorithm (`algorithm.*`, i.e. algorithms, algorithmic)
+- process (`process.*`, i.e. processing, processes, preprocessing)
+- data (`data.*`, i.e. dataset(s), database(s))
+- result(s)
+- repository(ies)
+
+```{r keywords_per_paper}
+tidy_texts_lower <- str_to_lower(tidy_texts$text)
+word_counts <- tibble(
+  id = tidy_texts$id,
+  `reproduc..` = str_count(tidy_texts_lower, "\\breproduc.*\\b"),
+  `replic..` = str_count(tidy_texts_lower, "\\breplicat.*\\b"),
+  `repeatab..` = str_count(tidy_texts_lower, "\\brepeatab.*\\b"),
+  `code` = str_count(tidy_texts_lower,
+    "(\\bcode\\b|\\bscript.*\\b|\\bpseudo\ code\\b)"),
+  software = str_count(tidy_texts_lower, "\\bsoftware\\b"),
+  `algorithm(s)` = str_count(tidy_texts_lower, "\\balgorithm.*\\b"),
+  `(pre)process..` = str_count(tidy_texts_lower, 
+                "(\\bprocess.*\\b|\\bpreprocess.*\\b|\\bpre-process.*\\b)"),
+  `data.*` = str_count(tidy_texts_lower, "\\bdata.*\\b"),
+  `result(s)` = str_count(tidy_texts_lower, "\\bresults?\\b"),
+  `repository/ies` = str_count(tidy_texts_lower, "\\brepositor(y|ies)\\b")
+)
+
+# https://stackoverflow.com/a/32827260/261210
+sumColsInARow <- function(df, list_of_cols, new_col) {
+  df %>% 
+    mutate_(.dots = ~Reduce(`+`, .[list_of_cols])) %>% 
+    setNames(c(names(df), new_col))
+}
+
+word_counts_sums <- sumColsInARow(
+  word_counts, 
+  names(word_counts)[names(word_counts) != "id"], "all") %>%
+  arrange(desc(all))
+
+# load paper names from evaluation table
+citations <- read_csv("Paper_Evaluation.csv", 
+                      col_types = cols_only(author = col_character(),
+                                            paper = col_character()))
+word_counts_sums <- word_counts_sums %>%
+  left_join(citations, by = c("id" = "paper")) %>%
+  select(citation = author, `reproduc..`:`result(s)`, `all`)
+
+word_counts_sums_total <- word_counts_sums %>% 
+  summarise_if(is.numeric, funs(sum)) %>%
+  add_column(citation = "Total", .before = 0)
+word_counts_sums <- rbind(word_counts_sums, word_counts_sums_total)
+
+# for inline testing: kable(word_counts_sums)
+kable(word_counts_sums,
+      caption = paste0("Reproducible research-related keywords in the corpus,",
+                       " ordered by sum of matches per paper"),
+      format = "latex", booktabs = TRUE) %>%
+  kableExtra::landscape()
+```
+
+\newpage
+
+## Figure: Word cloud of test corpus papers (left), and top words (right)
+
+```{r top_words}
+countPapersUsingWord <- function(the_word) {
+  sapply(the_word, function(w) {
+    no_stop_words %>%
+      filter(word == w) %>%
+      group_by(id) %>%
+      count %>%
+      nrow
+  })
+}
+
+top_words <- no_stop_words %>%
+  group_by(word) %>%
+  tally %>%
+  arrange(desc(n)) %>%
+  head(20) %>%
+  mutate(`# papers` = countPapersUsingWord(word)) %>%
+  add_column(place = c(1:nrow(.)), .before = 0)
+```
+
+```{r wordcloud_korpus,dpi=600,fig.width=12,fig.asp=0.8}
+set.seed(1)
+minimum_occurence <- 100
+cloud_words <- no_stop_words %>%
+  group_by(word) %>%
+  tally %>%
+  filter(n >= minimum_occurence) %>% # 100 chosen manually
+  arrange(desc(n))
+
+def.par <- par(no.readonly = TRUE)
+layout(matrix(c(1,0,2), 1, 3, byrow = TRUE), widths = c(lcm(12),lcm(6),lcm(6)))
+wordcloud(cloud_words$word, cloud_words$n,
+          max.words = Inf,
+          random.order = FALSE,
+          fixed.asp = FALSE,
+          rot.per = 0,
+          color = brewer.pal(8,"Dark2"))
+grid.table(as.matrix(top_words),
+           theme = ttheme_minimal(
+             base_size = 9,
+             padding = unit(c(5,5), "pt")))
+par(def.par)
+```
+
+This word cloud is based on `r length(unique(cloud_words$word))` unique words occuring each at least `r minimum_occurence` times, all in all occuring `r sum(cloud_words$n)` times which comprises `r round(sum(cloud_words$n)/ nrow(no_stop_words) * 100)` % of non-stop words.
+
+\newpage
+
+## Reproduciblity assessment
+
+```{r load_evaldata,warning=FALSE}
+category_levels <- c("0", "1", "2", "3")
+paper_evaluation_raw <- read_csv("Paper_Evaluation.csv", 
+    col_types = cols(
+      paper = col_skip(),
+      title = col_skip(),
+      `Notes Reviewer` = col_skip(),
+      `computational environment` = col_factor(levels = category_levels),
+      `input data` = col_factor(levels = category_levels),
+      `method/analysis/processing` = col_factor(levels = category_levels),
+      preprocessing = col_factor(levels = category_levels),
+      results = col_factor(levels = category_levels),
+      X12 = col_skip(),
+      X14 = col_skip(),
+      `Notes Reviewer` = col_skip(),
+      `Author comment` = col_skip()
+      ),
+    na = "NA")
+categoryColumns <- c("input data", 
+                     "preprocessing",
+                     "method/analysis/processing",
+                     "computational environment",
+                     "results")
+```
+
+```{r corpus_table_with_small_font_for_latex}
+options(knitr.kable.NA = '-')
+kable(paper_evaluation_raw %>% 
+        select(-matches("reviewer")) %>%
+        mutate(`short paper` = if_else(`short paper` == TRUE, "X", "")),
+      format = "latex", booktabs = TRUE,
+      caption = paste0("Reproducibility levels for paper corpus; ",
+                       "'-' is category not available")) %>%
+  kable_styling(latex_options = "scale_down")
+```
+
+\newpage
+
+## Conceptual papers
+
+```{r conceptual_papers,warning=FALSE}
+paper_evaluation <- paper_evaluation_raw %>%
+  # add year column
+  mutate(year = as.numeric(str_extract(author, "[0-9]+"))) %>%
+  # create new attribute for conceptual papers
+  mutate(conceptual = is.na(`input data`) 
+         & is.na(preprocessing) 
+         & is.na(`method/analysis/processing`) 
+         & is.na(`computational environment`) 
+         & is.na(results))
+
+count_conceptual <- nrow(paper_evaluation %>% 
+                           filter(conceptual))
+count_mixed <- nrow(paper_evaluation %>% 
+                      filter(is.na(`input data`) 
+                             | is.na(preprocessing) 
+                             | is.na(`method/analysis/processing`) 
+                             | is.na(`computational environment`) 
+                             | is.na(results)))
+```
+
+`r count_conceptual` papers are purely conceptual (all categories have value `NA`).
+These are not included in the following statistics.
+
+`r count_mixed` papers are partically conceptual (at least one category has a value of `NA`).
+These are evaluated.
+
+`r paper_evaluation %>% filter(is.na(preprocessing)) %>% count() %>% .$n` papers are not applicable for preprocessing criterion.
+
+\newpage
+
+## Overall conference contributions
+
+_How many conference contributions were made at AGILE conferences over the years?_
+
+We need to scrape data from the AGILE website for short papers and posters.
+
+```{r harvest_agile_website, cache=TRUE}
+base_url <- "https://agile-online.org/index.php/conference/proceedings/proceedings-"
+proceedings_urls <- sapply(X = as.character(c(2003:2017)), 
+                           FUN = function(x) { paste0(base_url, x)}, 
+                           USE.NAMES = TRUE)
+proceedings_html <- lapply(X = proceedings_urls, FUN = read_html)
+
+get_paper_links <- function(page){ 
+  links <- page %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    as.list() %>%
+    tibble(links = .) %>%
+    filter(str_detect(links, 
+                      pattern = "(ShortPapers|papers|proceedings|papers/Paper_)/[^pP]"))
+  return(links)
+}
+
+# papers, posters, abstracts of full papers - we don't care as long it is pdf
+get_all_links <- function(page){ 
+  all_links <- page %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    as.list()
+  
+  pdf_links <- tibble(links = all_links) %>%
+    filter(str_detect(links, pattern = "pdf$")) %>%
+    # keep only one of poster abstract and poster PDF:
+    filter(!str_detect(links, pattern = "Poster_in_PDF.pdf")) %>%
+    # some keynotes are also available for Download (at least one in 2012), remove them:
+    filter(!str_detect(links, pattern = "(keynotes|Keynote)"))
+  
+  return(pdf_links)
+}
+
+get_non_full_papers_links <- function(page){ 
+  get_all_links(page) %>%
+    # 2017 includes full paper abstracts in the PDFs, remove them:
+    filter(!str_detect(links, pattern = "FullPaperAbstract"))
+}
+
+proceedings_links_short_and_full_papers <- lapply(X = proceedings_html, 
+                                                  FUN = get_non_full_papers_links)
+```
+
+Get the ISBNs of AGILE proceedings via harvesting AGILE and Springer websites.
+Then query [Springer API](https://dev.springer.com/) for number of chapters in each book to get the full paper count.
+
+```{r harvest_springer_api,cache=TRUE}
+base_url_lngc <- "https://agile-online.org/index.php/conference/springer-series"
+# 2007 and 2017 are missing on the AGILE website
+lngc_2007 <- "https://link.springer.com/book/10.1007%2F978-3-540-72385-1"
+lngc_2017 <- "https://link.springer.com/book/10.1007/978-3-319-56759-4"
+
+springer_api_key <- paste0("&api_key=", Sys.getenv("SPRINGER_API_KEY"))
+springer_api_base <- "http://api.springer.com/metadata/json?"
+
+lngc_html <- read_html(base_url_lngc)
+
+lngc_books_urls <- lngc_html %>%
+  html_nodes(css = "a") %>%
+  html_attr("href") %>%
+  tibble(links = .) %>%
+  filter(str_detect(links, pattern = "/book/")) %>%
+  add_row(links = lngc_2007) %>%
+  add_row(links = lngc_2017)
+
+get_full_paper_count <- function(link) {
+  # extract id for book
+  isbn <- read_html(link) %>%
+    html_nodes("span[id=print-isbn], dd[itemprop=isbn]") %>%
+    html_text()
+  year <- read_html(link) %>%
+    html_nodes("span[id=copyright-info], div[class=copyright]") %>%
+    html_text() %>%
+    gsub("[^0-9]", "", .) %>%
+    as.numeric(.)
+  
+  url <- str_c(springer_api_base, "q=isbn:", isbn, springer_api_key)
+  
+  #cat("Query with isbn ", isbn, " for year ", year, ": ", url, "... ")
+  metadata <- fromJSON(url)
+  total <- as.numeric(metadata$result$total)
+  #cat("Result: ", total, "\n")
+  return(tibble(year = year, `full paper` = total))
+}
+
+lngc_full_paper_counts <- bind_rows(lapply(lngc_books_urls$links, get_full_paper_count))
+
+counts_any <- sapply(proceedings_links_short_and_full_papers, 
+                     function(x) { length(x[["links"]]) })
+non_full_paper_counts <- tibble(
+  year = as.numeric(names(counts_any)), 
+  `short paper/poster` = counts_any)
+
+paper_counts <- full_join(lngc_full_paper_counts, non_full_paper_counts, by = "year") %>%
+  arrange(desc(year))
+
+all_contributions <- 
+  sum(paper_counts$"full paper", na.rm = TRUE) + 
+  sum(paper_counts$"short paper/poster", na.rm = TRUE)
+full_papers <- sum(paper_counts$"full paper", na.rm = TRUE)
+
+sample_full_papers <- paper_evaluation %>% 
+  filter(`short paper` == FALSE) %>% 
+  count() %>% 
+  .$n
+sample_short_papers <- paper_evaluation %>% 
+  filter(`short paper` == TRUE) %>% 
+  count() %>% 
+  .$n
+
+kable(paper_counts)
+```
+
+Overall **`r all_contributions` conference contributions** (including posters and short papers), of which **`r full_papers` are full papers**, in the years `r min(paper_counts$year)` to `r max(paper_counts$year)`.
+
+The used **sample** contains `r sample_full_papers` full papers (`r round(sample_full_papers / full_papers * 100, digits = 2)` %) and `r sample_short_papers` short papers (percentage respectively full number of short papers not available because not distinguishable from poster abstracts for some years).
+
+\newpage
+
+## Table: Statistics of reproducibility levels per criterion
+
+```{r summary_evaldata}
+evaldata_numeric <- paper_evaluation %>%
+  # must convert factors to numbers to calculate the mean and median
+  mutate_if(is.factor, funs(as.integer(as.character(.))))
+
+summary(evaldata_numeric[,categoryColumns])
+
+# apply summary independently to format as table
+summaries <- sapply(evaldata_numeric[,categoryColumns], summary)
+exclude_values_summary <- c("1st Qu.", "3rd Qu.")
+kable(subset(summaries, !(rownames(summaries) %in% exclude_values_summary)), 
+      digits = 2,
+      col.names = c("input data", "preproc.", "method/analysis/proc.",
+                    "comp. env.", "results"),
+      caption = paste0("\\label{tab:levels_statistics}Statistics of ",
+                       "reproducibility levels per criterion"))
+```
+
+The preprocessing has `r sum(!is.na(evaldata_numeric$preprocessing))` values, with `0` and `1` around the "middle" resulting in a fraction as the median.
+
+\newpage
+
+## Figure: Results of the evaluation of the corpus of 32 papers
+
+```{r barplot_criteria,fig.width=10}
+# match the colours to time series plot below
+colours <- RColorBrewer::brewer.pal(length(categoryColumns), "Set1")
+level_names <- c("0", "1", "2", "3", "NA")
+
+criteriaBarplot = function(data, main, colour) {
+  barplot(table(data, useNA = "always"), 
+          main = main,
+          xlab = "Level", 
+          ylim = c(0,25),
+          names.arg = level_names,col = colours[colour])
+}
+
+par(mfrow = c(1,length(categoryColumns)))
+criteriaBarplot(paper_evaluation$`input data`,
+                main = "Input data", colour = 1)
+criteriaBarplot(paper_evaluation$`preprocessing`, 
+                main = "Preprocessing", colour = 2)
+criteriaBarplot(paper_evaluation$`method/analysis/processing`,
+                main = "Methods/Analysis/\nProcessing", colour = 3)
+criteriaBarplot(paper_evaluation$`computational environment`,
+                main = "Computational\nEnvironment", colour = 4)
+criteriaBarplot(paper_evaluation$results,
+                main = "Results", colour = 5)
+```
+
+```{r criteria_numbers}
+data_level_zero <- paper_evaluation %>% 
+  filter(`input data` == 0) %>% 
+  count() %>% .$n
+
+data_level_two <- paper_evaluation %>% 
+  filter(`input data` == 2) %>% 
+  count() %>% .$n
+
+preprocessing_included <- paper_evaluation %>% 
+  filter(!is.na(preprocessing)) %>% 
+  count() %>% .$n
+
+methods_and_results_eq_one <- evaldata_numeric %>% 
+  filter(`method/analysis/processing` == 1 & results == 1) %>% 
+  count() %>% .$n
+```
+
+`r data_level_zero` papers have level `0` and `r data_level_two` have level `2` in the data criterion.
+
+`r preprocessing_included` papers include some kind of preprocessing.
+
+`r methods_and_results_eq_one` papers have level `1` in both methods and results criterion.
+
+\newpage
+
+## Table: Mean levels per criterion for full and short papers
+
+```{r summary_evaldata_grouped}
+summaries_short_paper <- sapply(evaldata_numeric %>%
+                                  filter(`short paper` == TRUE) %>%
+                                  select(categoryColumns), summary)
+means_short_paper <- subset(summaries_short_paper, rownames(summaries) %in% c("Mean"))
+rownames(means_short_paper) <- c("Short papers")
+summaries_full_paper <- sapply(evaldata_numeric %>% filter(`short paper` == FALSE) %>%
+                                 select(categoryColumns), summary)
+means_full_paper <- subset(summaries_full_paper, rownames(summaries) %in% c("Mean"))
+rownames(means_full_paper) <- c("Full papers")
+```
+
+\small
+
+```{r summary_evaldata_grouped_smallfont_latex}
+kable(rbind(means_full_paper, means_short_paper),
+      digits = 2,
+      col.names = c("input data", "preproc.", "method/analysis/proc.", "comp. env.", "results"),
+      caption = paste0("\\label{tab:mean_full_vs_short}",
+                       "Mean levels per criterion for full and short papers"))
+```
+
+\normalsize
+
+\newpage
+
+## Extra table: Mean levels averaged across criteria over time
+
+```{r evaldata_summary_by_year_mean}
+means_years <- evaldata_numeric %>%
+  filter(conceptual == FALSE) %>%
+  group_by(year) %>%
+  summarise(mean = mean(c(`input data`, 
+                          preprocessing, 
+                          `method/analysis/processing`, 
+                          `computational environment`, 
+                          `results`),
+                        na.rm = TRUE),
+            `paper count` = n())
+
+means_years_table <- means_years %>% 
+        mutate(mean = round(mean, 2), 
+               `paper count` = as.character(`paper count`)) %>%
+        mutate(labels = str_c(year, " (n = ", `paper count`, ")")) %>%
+        column_to_rownames("labels") %>%
+        select(mean) %>%
+        t()
+```
+
+\small
+
+```{r summary_by_year_smallfont_latex}
+kable(means_years_table,
+      caption = "Summarised mean values over all criteria over time")
+```
+
+\normalsize
+
+\newpage
+
+## Figure: Reproducibility levels over time
+
+```{r evaldata_by_year_plot,fig.width=10,dpi=300}
+evaldata_years <- evaldata_numeric %>%
+  filter(conceptual == FALSE) %>%
+  filter(year != 2011) %>%
+  group_by(year) %>%
+  summarise(input = mean(`input data`, na.rm = TRUE),
+            preprocessing = mean(preprocessing, na.rm = TRUE),
+            method = mean(`method/analysis/processing`, na.rm = TRUE),
+            environment = mean(`computational environment`, na.rm = TRUE),
+            results = mean(results, na.rm = TRUE))
+paper_count_years <- evaldata_numeric %>%
+  filter(conceptual == FALSE) %>%
+  filter(year != 2011) %>%
+  group_by(year) %>%
+  summarise(`paper count` = n())
+
+evaldata_years_long <- melt(evaldata_years, id.vars = c("year"))
+ggplot(evaldata_years_long, aes(year, value)) +
+  geom_bar(aes(fill = variable), position = "dodge", stat = "identity") +
+  ylab("mean value") + 
+  scale_x_continuous(breaks = evaldata_years$year,
+                     labels = paste0(paper_count_years$year, 
+                                     " (n=", 
+                                     paper_count_years$`paper count`, 
+                                     ")")) +
+  scale_fill_brewer(palette = "Set1", name = "Category") +
+  theme_tufte(base_size = 18) +
+  theme(legend.position = c(0.15,0.75), 
+        legend.text = element_text(size = 14)) +
+        #axis.text.y = element_text(face="bold"),
+        #axis.text.x = element_text(face="bold")) +
+  geom_hline(yintercept = seq(0,3,0.25), col = "white", lwd = 0.5) +
+  stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean, shape = "-", size = 2) +
+  stat_summary(fun.y = mean, geom = "line", linetype = "dotted", mapping = aes(group = 1))
+```
+
+\newpage
+
+## Figure: Author survey results on the importance of reproducibility
+
+```{r survey_results_considered_reproducibility,warning=FALSE,fig.width=12,dpi=300}
+Reproducibility_Survey <- read_delim(file = "Reproducibility_Survey.csv", 
+    delim = ";", 
+    escape_double = FALSE, 
+    col_types = cols(`Short/Full Paper` = col_factor(levels = c("Full", 
+        "Short")), 
+        Timestamp = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+        X15 = col_skip()), 
+    trim_ws = TRUE) %>%
+  rename(`considered reproducibility` =
+ `Have you considered the reproducibility of research published in your nominated paper?`)
+
+considered_reproducibility <- Reproducibility_Survey %>%
+  group_by(`Short/Full Paper`,
+           `considered reproducibility`) %>%
+  filter(!is.na(`considered reproducibility`)) %>%
+  count()
+
+responses_full <- considered_reproducibility %>% 
+  filter(`Short/Full Paper` == "Full") %>% 
+  .$n %>% sum()
+responses_short <- considered_reproducibility %>% 
+  filter(`Short/Full Paper` == "Short") %>% 
+  .$n %>% sum()
+
+responses_for_papers_count <- length(
+  # substract 1 for "The author has not agreed"
+  unique(Reproducibility_Survey$`Please select your nominated AGILE Best Paper.`)) - 1
+
+anonymous_responses_count <- Reproducibility_Survey %>%
+  filter(is.na(`considered reproducibility`)) %>%
+  count()
+
+ggplot(data = Reproducibility_Survey %>%
+  filter(!is.na(`considered reproducibility`)), 
+  aes(x = `considered reproducibility`, 
+           fill = `Short/Full Paper`)) + 
+  geom_bar(width = 0.6, position = "dodge") +
+  scale_fill_brewer(palette = "Set1", name = "Publication type") +
+  scale_x_discrete(label = function(x) str_wrap(x, width = 20),
+                   name = paste0("Have you considered the reproducibility of ",
+                                 "research published in your nominated paper? (n = ",
+                                 sum(considered_reproducibility$n), ")")) +
+  scale_y_discrete(name = "Count", limits = c(0:12)) +
+  theme_tufte(base_size = 18) + 
+  theme(legend.position = c(0.2,0.8), 
+        legend.text = element_text(size = 16), 
+        legend.key.size = unit(1, "cm")) +
+  geom_hline(yintercept = seq(1:10), col = "white", lwd = 0.5)
+```
+
+Of the `r sum(considered_reproducibility$n)` responses the plot is based on, `r responses_short` are short and `r responses_full` full papers.
+
+The `r nrow(Reproducibility_Survey)` responses cover `r responses_for_papers_count` papers and include `r anonymous_responses_count` responses without consent to use the data.
+
+\newpage
+
+## Table: Hindering circumstances for reproducibility for each survey response
+
+```{r survey_results_hindering_circumstances}
+hindering_circumstances <- Reproducibility_Survey %>%
+  select(starts_with('Please rate')) %>%
+  drop_na() %>% # remove responses with no answers
+  # order the levels of the factors:
+  mutate_all(factor, levels = c("Not at all",
+                                "Slightly hindered",
+                                "Moderately hindered",
+                                "Strongly hindered",
+                                "Main reason"), ordered = TRUE)
+
+names(hindering_circumstances) <- sapply(names(hindering_circumstances), function(name) {
+  if (grepl(".*legal.*", name, ignore.case = TRUE))
+    return("Legal restrictions")
+  else if (grepl(pattern = ".*time.*", x = name, ignore.case = TRUE))
+    return("Lack of time")
+  else if (grepl(pattern = ".*tools.*", x = name, ignore.case = TRUE))
+    return("Lack of tools")
+  else if (grepl(pattern = ".*motivation*", x = name, ignore.case = TRUE))
+    return("Lack of incentive")
+  else if (grepl(pattern = ".knowledge.*", x = name, ignore.case = TRUE))
+    return("Lack of knowledge")
+  else return(NA)
+})
+
+# count the occurences of "main reason" for each question
+hindering_circumstances %>%
+  summarise_all(funs(sum(grepl(pattern = "Main reason", x = .))))
+  
+main_reason_counts <- as.data.frame(t(hindering_circumstances %>%
+          summarise_all(
+            funs(sum(grepl(pattern = "Main reason", x = .)))))) %>%
+  rename(count = V1) %>%
+  rownames_to_column(var = "circumstance") %>%
+  arrange(desc(count))
+
+# sort the columns (circumstances) by the number of "main reason" answers
+hindering_circumstances <- hindering_circumstances %>%
+  select(main_reason_counts$circumstance) %>%
+  # sort the rows by the colum with most "main reason" answers
+  arrange(desc(!! rlang::sym(main_reason_counts$circumstance[[1]])))
+
+crcmstncs_ht <- as_hux(hindering_circumstances)
+# configure font size and cell padding
+font_size(crcmstncs_ht) <- 8
+
+bg_colors <- brewer.pal(n = 5, name = "GnBu")
+crcmstncs_ht <- crcmstncs_ht %>%
+  # set background colors for cells
+  set_background_color(where(crcmstncs_ht == "Main reason"), bg_colors[[5]]) %>% 
+  set_background_color(where(crcmstncs_ht == "Strongly hindered"), bg_colors[[4]]) %>%
+  set_background_color(where(crcmstncs_ht == "Moderately hindered"), bg_colors[[3]]) %>%
+  set_background_color(where(crcmstncs_ht == "Slightly hindered"), bg_colors[[2]]) %>%
+  set_background_color(where(crcmstncs_ht == "Not at all"), bg_colors[[1]]) %>%
+  add_colnames() %>%
+  # format column names:
+  set_bold(row = 1, col = 1:length(crcmstncs_ht), TRUE) %>%
+  set_bottom_border(row = 1, col = 1:length(crcmstncs_ht), 1) %>%
+  set_font_size(row = 1, col = 1:length(crcmstncs_ht), value = 10) %>%
+  # add label, caption, and float:
+  set_label("tab:hindering_circumstances") %>%
+  set_latex_float("ht") %>%
+  set_width(1) %>%
+  set_caption(paste0(
+    "Hindering circumstances for reproducibility for each survey response ",
+    #"with columns sorted by the respective count of 'main reason' ",
+    #"and rows sorted by the answer categories in descending order"
+    "(n = ", nrow(hindering_circumstances), ")"))
+
+crcmstncs_ht
+```
+

@@ -1,0 +1,40 @@
+paper,author,title,reviewer 1,reviewer 2,short paper,input data,preprocessing,method/analysis/processing,computational environment,results,,Notes Reviewer,,Author comment
+12017,Zhu et al. (2017),Beyond Pairs: Generalizing the Geo-dipole for Quantifying Spatial Patterns in Geographic Fields,CG,RS,FALSE,0,1,1,1,1,,geodipole - develop a new concept and test it; the test is the application of an algorithm to data,,
+22017,Knoth et al. (2017),3D Building Maps for Everyone - Mapping Buildings using VGI,CG,FO,FALSE,0,NA,0,1,1,,,,
+32017,Konkol et al. (2017),Follow the signs - countering disengagement from the real world during city exploration,CG,BH,FALSE,2,2,1,1,1,,two parts: very well documented initital survey; less well documented prototype evaluation,,
+42017,Haumann et al. (2017),Energy-based Routing and Cruising Range Estimation for Electric Bicycles,CG,DN,TRUE,0,1,1,0,1,,,,
+52017,Brinkhoff (2017),Supporting Dynamic Labeling in Web Map Applications,CG,RS,TRUE,0,NA,1,0,0,,,,
+12016,Almer et al. (2016),Critical Situation Monitoring at Large Scale Events from Airborne Video based Crowd Dynamics Analysis,CG,DN,FALSE,0,NA,1,1,1,,,,
+22016,Wiemann (2016),Spatial Data Relations as a Means to Enrich Species Observations from Crowdsourcing,BH,FO,FALSE,2,NA,1,1,1,,,,
+32016,Juhász & Hochmair (2016),Cross-linkage between Mapillary Street Level Photos and OSM Edits,FO,CG,FALSE,0,1,1,0,0,,,,
+42016,Josselin et al. (2016),Sonorous Cartography for Sighted and Blind People,BH,RS,TRUE,1,NA,0,0,1,,(notes: developed QGIS plugin; name of plugin not mentioned; ),,
+52016,Rosser et al. (2016),Full Meta Objects for Flexible Geoprocessing workflows: profiling WPS or BPMN?,VC,DN,TRUE,0,NA,1,0,0,,"DN: develop prototype, could have been shared;",,"Authors comment: ""data is  3 I think to remember"""
+12015,Kuhn & Ballatore (2015),Designing a Language for Spatial Computing,BH,CG,FALSE,NA,NA,NA,NA,NA,,language for spatial computing is based on core concepts and their conceptual rep. in Haskell and Python,,
+22015,Mazimpaka & Timpf (2015),Exploring the potential of combining taxi GPS and Flickr data for discovering functional regions,RS,FO,FALSE,2,1,1,1,1,,,,
+32015,Steuer et al. (2015),Voluminator - Approximating the Volume of 3D Buildings to Overcome Topological Errors,RS,DN,FALSE,2,0,1,1,1,,"(authors comment: ""1. Our algorithm is available on Github and is licensed under LGPL, so I wonder why you decided on code 1. I would have expected code 3, as it is available, open and permanent.
+2. Our paper uses Java (open source if OpenJDK is used) and CityGML4j (free and open source) as the only 3rd part library. Albeit not tested, it should be running on pretty much any standard system, Windows. Linux etc. I would have expected to be classified as class 3.
+3. Our algorithm itself does not need preprocessing on the data we used in the study. The data processing for evaluating the algorithm (removing random faces of the building models, etc.) is quite trivial and documented within the paper and should be easily recreatable. I would have expected code 1."")",,
+42015,Fogliaroni & Hobel (2015),Implementing Naive Geography via Qualitative Spatial Relation Queries,DN,CG,TRUE,NA,NA,NA,NA,NA,,"(notes: abstract ideas, uncertained results",,
+52015,Heinz & Schlieder (2015),An Agent-Based Simulation Framework for Location-Based Games,FO,CG,TRUE,0,0,1,1,1,,,,
+12014,Scheider et al. (2014),Encoding and querying historic map content,BH,DN,FALSE,1,1,2,1,1,,"(notes: as data I consider the maps and vocabularies; preprocessing in tihe mentioned georeferencing tool; computational env. provided online, but link is not working!)",,
+22014,Gröchening et al. (2014),Estimating Completeness of VGI Datasets by Analyzing Community Activity over Time Periods.,RS,FO,FALSE,2,0,1,0,1,,,,
+32014,Fan et al. (2014),Estimation of building types on OpenStreetMap based on urban morphology analysis. ,FO,BH,FALSE,0,1,1,0,1,,,,
+42014,Soleymani et al. (2014),Capability of movement features extracted from GPS trajectories for the classification of fine-grained behaviors,RS,DN,TRUE,0,0,1,0,0,,"(a paper with great potential for reproducibility, which failed to do it)",,
+52014,Wiemann & Bernard (2014),Linking crowdsourced observations with INSPIRE,RS,DN,TRUE,0,0,1,0,0,,,,
+12013,Osaragi & Tsuda (2013),Facility Use-choice Model with Travel Costs Incorporating Means of Transportation and Travel Direction,VC,RS,FALSE,0,1,1,0,1,,,,
+22013,Baglatzi & Kuhn (2013),On the Formulation of Conceptual Spaces for Land Cover Classification System,BH,DN,FALSE,NA,NA,NA,NA,NA,,,,
+32013,Schwering et al. (2013),Orientation Information in Different Forms of Route Instructions,BH,MK,TRUE,0,0,1,NA,1,,(notes: manual classification of route segments following a defined classification schema; no computational approach involved),,
+42013,Stein & Schlieder (2013),A Geowiki for Participatory Mobility,BH,MK,TRUE,0,NA,1,0,1,,,,
+12012,Osaragi & Hoshino (2012),Predicting Spatiotemporal Distribution of Transient Occupants in Urban Areas,RS,VC,FALSE,0,0,1,0,1,,,,
+22012,Magalhães et al. (2012),A new Method for Computing the Drainage Network Based on Raising the Level of an Ocean Surrounding the Terrain,DN,BH,FALSE,0,0,1,0,0,,"(authors comment: ""I don't agree. Our input datasets are available at the NASA SRTM website. We also describe our computational environment (a regular desktop computer) and one could reproduce it easily (although the computer used in the experiments -- with a Core 2 Duo processor - is outdated nowadays).""",,"Original notes: could have/should have:
+- provide the raw collected data for the plots
+- provide details on the AMI (i.e. configuration file) etc.
+- provide the script used for the evaluation
+- be a lot more specific when it comes to used versions and configurations
+- provide the actual used data and algorithm"
+32012,Foerster et al. (2012),Live Geoinformation with Standardized Geoprocessing Services,BH,RS,FALSE,1,NA,1,1,1,,,,
+42012,Merki & Laube (2012),Detecting Reaction Movement Patterns in Trajectory Data,RS,BH,TRUE,0,NA,1,1,1,,"(notes BH: they defined criteria for the algorithms they test, which I see as low level pseudo code.)",,
+52012,Kiefer et al. (2012),Location-aware Mobile Eve Tracking for the Explanation of Wayfinding Behavior,DN,FO,TRUE,0,1,1,0,1,,,,
+12010,Raubal & Winter (2010),A Spatio-Temporal Model Towards Ad-Hoc Collaborative Decision-Making,DN,MK,FALSE,NA,NA,NA,NA,NA,,,,
+22010,Schäffer et al. (2010),Towards Spatial Data Infrastructures in the Clouds,VC,BH,FALSE,0,0,1,1,1,,,,
+32010,Körner et al. (2010),Visit Potential: A Common Vocabulary for the Analysis of Entity-Location Interactions in Mobility Applications,FO,BH,FALSE,NA,NA,NA,NA,NA,,,,
