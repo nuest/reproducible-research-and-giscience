@@ -24,6 +24,8 @@ All contained code is licensed under the [Apache License 2.0](https://choosealic
 
 The data used is licensed under a [Open Data Commons Attribution License](https://opendatacommons.org/licenses/by/).
 
+See the paper's "Author Contributions" section for details on the contributors of data files.
+
 \newpage
 
 ## Metadata
@@ -50,6 +52,8 @@ library("kableExtra")
 library("devtools")
 library("rlang")
 library("huxtable")
+library("here")
+library("httr")
 ```
 
 ```{r session_info}
@@ -79,7 +83,7 @@ Sys.setenv(SPRINGER_API_KEY = "<your key>")
 
 ```{r check_api_key}
 if (is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA)))
-  stop("API key is not set, please check the section \"Prerequisites\" of the Rmd file.")
+  warning("API key is not set, please check the section \"Prerequisites\" of the Rmd file.")
 ```
 
 ```{r data_path}
@@ -92,10 +96,9 @@ The data for the analysis is required in form of a directory with PDF files.
 Add the PDFs to a directory called ` `r data_path` ` next to this file.
 
 You can contact the original paper authors and ask for the test dataset to reproduce the full analysis.
-Alternatively, you can download a selection of AGILE short papers to test the workflow using the code below.
+Alternatively, you can download a selection of AGILE short papers to test the workflow using the code below which is _not_ executed by default.
 
 ```{r demo_data,eval=FALSE}
-library("here")
 dir.create(here::here(data_path))
 
 # harvest links to PDFs, select more years for more data, 
@@ -121,7 +124,6 @@ get_links <- function(page){
 
 proceedings_links_any <- lapply(X = proceedings_html, FUN = get_links)
 
-library("httr")
 base_url <- "https://agile-online.org/"
 files <- lapply(X = names(proceedings_links_any), FUN = function(x) {
   year <- x
@@ -179,7 +181,6 @@ See the paper supplemental files for a full list of citations.
 The analysis loads all files from the directory _`r here::here(data_path)`_.
 
 ```{r load_filenames}
-library("here")
 files <- dir(path = here::here(data_path), pattern = ".pdf$", full.names = TRUE)
 ```
 
@@ -525,70 +526,79 @@ Get the ISBNs of AGILE proceedings via harvesting AGILE and Springer websites.
 Then query [Springer API](https://dev.springer.com/) for number of chapters in each book to get the full paper count.
 
 ```{r harvest_springer_api,cache=TRUE}
-base_url_lngc <- "https://agile-online.org/index.php/conference/springer-series"
-# 2007 and 2017 are missing on the AGILE website
-lngc_2007 <- "https://link.springer.com/book/10.1007%2F978-3-540-72385-1"
-lngc_2017 <- "https://link.springer.com/book/10.1007/978-3-319-56759-4"
-
-springer_api_key <- paste0("&api_key=", Sys.getenv("SPRINGER_API_KEY"))
-springer_api_base <- "http://api.springer.com/metadata/json?"
-
-lngc_html <- read_html(base_url_lngc)
-
-lngc_books_urls <- lngc_html %>%
-  html_nodes(css = "a") %>%
-  html_attr("href") %>%
-  tibble(links = .) %>%
-  filter(str_detect(links, pattern = "/book/")) %>%
-  add_row(links = lngc_2007) %>%
-  add_row(links = lngc_2017)
-
-get_full_paper_count <- function(link) {
-  # extract id for book
-  isbn <- read_html(link) %>%
-    html_nodes("span[id=print-isbn], dd[itemprop=isbn]") %>%
-    html_text()
-  year <- read_html(link) %>%
-    html_nodes("span[id=copyright-info], div[class=copyright]") %>%
-    html_text() %>%
-    gsub("[^0-9]", "", .) %>%
-    as.numeric(.)
+if(is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA))) {
+  # no API key provided, add some dummy data for the document to render
+  all_contributions <- NA
+  full_papers <- NA
+  paper_counts <- tibble(year = c(NA))
+  sample_full_papers <- NA
+  sample_short_papers <- NA
+} else {
+  base_url_lngc <- "https://agile-online.org/index.php/conference/springer-series"
+  # 2007 and 2017 are missing on the AGILE website
+  lngc_2007 <- "https://link.springer.com/book/10.1007%2F978-3-540-72385-1"
+  lngc_2017 <- "https://link.springer.com/book/10.1007/978-3-319-56759-4"
   
-  url <- str_c(springer_api_base, "q=isbn:", isbn, springer_api_key)
+  springer_api_key <- paste0("&api_key=", Sys.getenv("SPRINGER_API_KEY"))
+  springer_api_base <- "http://api.springer.com/metadata/json?"
   
-  #cat("Query with isbn ", isbn, " for year ", year, ": ", url, "... ")
-  metadata <- fromJSON(url)
-  total <- as.numeric(metadata$result$total)
-  #cat("Result: ", total, "\n")
-  return(tibble(year = year, `full paper` = total))
+  lngc_html <- read_html(base_url_lngc)
+  
+  lngc_books_urls <- lngc_html %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    tibble(links = .) %>%
+    filter(str_detect(links, pattern = "/book/")) %>%
+    add_row(links = lngc_2007) %>%
+    add_row(links = lngc_2017)
+  
+  get_full_paper_count <- function(link) {
+    # extract id for book
+    isbn <- read_html(link) %>%
+      html_nodes("span[id=print-isbn], dd[itemprop=isbn]") %>%
+      html_text()
+    year <- read_html(link) %>%
+      html_nodes("span[id=copyright-info], div[class=copyright]") %>%
+      html_text() %>%
+      gsub("[^0-9]", "", .) %>%
+      as.numeric(.)
+    
+    url <- str_c(springer_api_base, "q=isbn:", isbn, springer_api_key)
+    
+    #cat("Query with isbn ", isbn, " for year ", year, ": ", url, "... ")
+    metadata <- fromJSON(url)
+    total <- as.numeric(metadata$result$total)
+    #cat("Result: ", total, "\n")
+    return(tibble(year = year, `full paper` = total))
+  }
+  
+  lngc_full_paper_counts <- bind_rows(lapply(lngc_books_urls$links, get_full_paper_count))
+  
+  counts_any <- sapply(proceedings_links_short_and_full_papers, 
+                       function(x) { length(x[["links"]]) })
+  non_full_paper_counts <- tibble(
+    year = as.numeric(names(counts_any)), 
+    `short paper/poster` = counts_any)
+  
+  paper_counts <- full_join(lngc_full_paper_counts, non_full_paper_counts, by = "year") %>%
+    arrange(desc(year))
+  
+  all_contributions <- 
+    sum(paper_counts$"full paper", na.rm = TRUE) + 
+    sum(paper_counts$"short paper/poster", na.rm = TRUE)
+  full_papers <- sum(paper_counts$"full paper", na.rm = TRUE)
+  
+  sample_full_papers <- paper_evaluation %>% 
+    filter(`short paper` == FALSE) %>% 
+    count() %>% 
+    .$n
+  sample_short_papers <- paper_evaluation %>% 
+    filter(`short paper` == TRUE) %>% 
+    count() %>% 
+    .$n
+  
+  kable(paper_counts)
 }
-
-lngc_full_paper_counts <- bind_rows(lapply(lngc_books_urls$links, get_full_paper_count))
-
-counts_any <- sapply(proceedings_links_short_and_full_papers, 
-                     function(x) { length(x[["links"]]) })
-non_full_paper_counts <- tibble(
-  year = as.numeric(names(counts_any)), 
-  `short paper/poster` = counts_any)
-
-paper_counts <- full_join(lngc_full_paper_counts, non_full_paper_counts, by = "year") %>%
-  arrange(desc(year))
-
-all_contributions <- 
-  sum(paper_counts$"full paper", na.rm = TRUE) + 
-  sum(paper_counts$"short paper/poster", na.rm = TRUE)
-full_papers <- sum(paper_counts$"full paper", na.rm = TRUE)
-
-sample_full_papers <- paper_evaluation %>% 
-  filter(`short paper` == FALSE) %>% 
-  count() %>% 
-  .$n
-sample_short_papers <- paper_evaluation %>% 
-  filter(`short paper` == TRUE) %>% 
-  count() %>% 
-  .$n
-
-kable(paper_counts)
 ```
 
 Overall **`r all_contributions` conference contributions** (including posters and short papers), of which **`r full_papers` are full papers**, in the years `r min(paper_counts$year)` to `r max(paper_counts$year)`.
