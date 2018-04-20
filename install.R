@@ -5,6 +5,7 @@ install.packages("wordcloud")
 install.packages("ggthemes")
 install.packages("kableExtra")
 install.packages("huxtable")
+install.packages("here")
 
 # Install LaTeX packages
 tinytex::tlmgr_install("siunitx")
