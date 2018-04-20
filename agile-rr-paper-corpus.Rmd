@@ -10,9 +10,10 @@ output:
   html_document:
     df_print: paged
     toc: yes
-  word_document:
-    toc: yes
 urlcolor: blue
+# add lscape package to support kableExtra::landscape() for PDF output
+header-includes: |
+  \usepackage{lscape}
 ---
 
 ## License
@@ -55,17 +56,25 @@ library("huxtable")
 devtools::session_info(include_base = TRUE)
 ```
 
-This document is versioned in a private [git](https://git-scm.com/) repository and the current build is `r system2("git", "rev-parse --short HEAD", stdout = TRUE, stderr = TRUE)`.
+This document is versioned in a public [git](https://git-scm.com/) repository, [https://github.com/nuest/reproducible-research-and-giscience](https://github.com/nuest/reproducible-research-and-giscience), and the current revision is `r system2("git", "rev-parse --short HEAD", stdout = TRUE, stderr = TRUE)`.
 
 \newpage
 
 ## Prerequisites
 
+### API key
+
 An API key is needed for accessing the [Springer API](https://dev.springer.com/) to automatically retrieve the number of full papers.
 Create a file `.Renviron` next to this document and add the following line:
 
-```{r,eval=FALSE}
+```
 SPRINGER_API_KEY=<your key>
+```
+
+Or set the environment variable within this notebook:
+
+```{r set_api_key,eval=FALSE}
+Sys.setenv(SPRINGER_API_KEY = "<your key>")
 ```
 
 ```{r check_api_key}
@@ -73,32 +82,110 @@ if (is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA)))
   stop("API key is not set, please check the section \"Prerequisites\" of the Rmd file.")
 ```
 
-## Instructions
+```{r data_path}
+data_path <- "paper-corpus"
+```
 
-To create the PDF of the reproducibility package from this document you can run the following commands.
+### Data
+
+The data for the analysis is required in form of a directory with PDF files.
+Add the PDFs to a directory called ` `r data_path` ` next to this file.
+
+You can contact the original paper authors and ask for the test dataset to reproduce the full analysis.
+Alternatively, you can download a selection of AGILE short papers to test the workflow using the code below.
+
+```{r demo_data,eval=FALSE}
+library("here")
+dir.create(here::here(data_path))
+
+# harvest links to PDFs, select more years for more data, 
+# e.g. c(2003:2017) and increase max_files_per_year
+years <- c(2017)
+max_files_per_year <- 10
+base_url <- "https://agile-online.org/index.php/conference/proceedings/proceedings-"
+proceedings_urls <- sapply(X = as.character(years),
+                           FUN = function(x) { paste0(base_url, x) }, USE.NAMES=TRUE)
+proceedings_html <- lapply(X = proceedings_urls, FUN = read_html)
+
+# papers, posters, abstracts of full papers, keynotes - we don't care as long it is pdf
+# we might also catch both abstract of a poster and the poster itself
+get_links <- function(page){ 
+  all_links <- page %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    as.list()
+  pdf_links <- tibble(links = all_links) %>%
+    filter(str_detect(links, pattern = "pdf$"))
+  return(pdf_links)
+}
+
+proceedings_links_any <- lapply(X = proceedings_html, FUN = get_links)
+
+library("httr")
+base_url <- "https://agile-online.org/"
+files <- lapply(X = names(proceedings_links_any), FUN = function(x) {
+  year <- x
+  file_in_year <- 1
+  max_files <- min(max_files_per_year, length(proceedings_links_any[[year]]$links))
+  year_links <- proceedings_links_any[[year]]$links[c(1:max_files)]
+  
+  files <- lapply(X= year_links, FUN = function(x) {
+    link_url <- paste0(base_url, x)
+    filename <- here::here(data_path, 
+                           paste0(year, file_in_year, "_", basename(x)))
+    if(!file.exists(filename)) {
+      response <- GET(url = link_url)
+      raw_content <- content(response, "raw")
+      writeBin(raw_content, filename)
+      #cat("Saved URL", link_url, "\t\tto file\t\t", filename, "\n")
+    }
+    filename
+    file_in_year <<- file_in_year + 1
+  })
+  files
+  cat("Downloaded", length(files), "files for year", year, "\n")
+})
+```
+
+### Code
+
+The **text analysis** is based the R package [`tidytext`](https://cran.r-project.org/package=tidytext) from the [`tidyverse`](https://www.tidyverse.org/) suite of packages and uses the [`dplyr`](http://dplyr.tidyverse.org/) grammar.
+Read the [`tidytext` tutorial](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html) to learn about the used functions and concepts.
+
+The **plots and tables** of survey data and evaluation use the packages [`ggplot2`](http://ggplot2.tidyverse.org/) and [`knitr::kable()`](https://yihui.name/knitr/)/[`kableExtra`](https://cran.r-project.org/package=kableExtra).
+
+\newpage
+
+## Reproduce paper
+
+_If you do not have the original data or do not download the data, you cannot reproduce the text analysis part of the paper, i.e. wordcloud and terms frequency analysis._ **You can still reproduce the other figures**.
+
+To create the PDF of the reproducibility package based on this document you can run the following commandsin a new R session after completing the prerequisites with the original paper corpus data.
 
 ```{r render_with_rmarkdown,eval=FALSE}
 require("knitr")
 require("rmarkdown")
-rmarkdown::render("agile-rr-paper-corpus.Rmd",
-                  output_format = pdf_document(latex_engine = "xelatex"))
+rmarkdown::render("agile-rr-paper-corpus.Rmd", output_format = "pdf_document")
 ```
 
 \newpage
 
 ## Paper corpus: loading and cleaning
 
-The test dataset for the AGILE RR publication is available in a privately shared online folder.
+The test dataset for the analysis cannot be shared publicly due to copyrights.
 It comprises all nominees for the best paper award since 2008, both short papers and full papers.
+See the paper supplemental files for a full list of citations.
 
-```{r}
-data_path <- "paper-corpus"
-files <- dir(path = data_path, pattern = ".pdf$", full.names = TRUE)
+The analysis loads all files from the directory _`r here::here(data_path)`_.
+
+```{r load_filenames}
+library("here")
+files <- dir(path = here::here(data_path), pattern = ".pdf$", full.names = TRUE)
 ```
 
 This analysis was created with the following `r length(files)` documents, `r length(which(grepl("shortpaper", files)))` of which are short papers:
 
-```{r, echo=FALSE}
+```{r list_files,echo=FALSE}
 files
 ```
 
@@ -109,41 +196,49 @@ texts <- lapply(files, pdf_text)
 texts <- unlist(lapply(texts, str_c, collapse = TRUE))
 infos <- lapply(files, pdf_info)
 
-tidy_texts <- tibble(id = str_extract(files, "[0-9]+"),
-                     file = files,
-                     text = texts,
-                     pages = map_chr(infos, function(info) {info$pages}))
-
-papers_words <- tidy_texts %>%
-  select(file,
-         text) %>%
-  unnest_tokens(word, text)
-
-my_stop_words <- tibble(
-  word = c(
-    "et",
-    "al",
-    "fig",
-    "e.g",
-    "i.e",
-    "http",
-    "ing",
-    "pp",
-    "figure",
-    "based"
-  ),
-  lexicon = "agile"
-)
-all_stop_words <- stop_words %>%
-  bind_rows(my_stop_words)
-
-suppressWarnings({
-  no_numbers <- papers_words %>%
-    filter(is.na(as.numeric(word)))
-})
-no_stop_words <- no_numbers %>%
-  anti_join(all_stop_words, by = "word") %>%
-  mutate(id = str_extract(file, "[0-9]+"))
+if (!is.null(texts)) {
+  tidy_texts <- tibble(id = str_extract(files, "[0-9]+"),
+                       file = files,
+                       text = texts,
+                       pages = map_chr(infos, function(info) {info$pages}))
+  
+  papers_words <- tidy_texts %>%
+    select(file,
+           text) %>%
+    unnest_tokens(word, text)
+  
+  my_stop_words <- tibble(
+    word = c(
+      "et",
+      "al",
+      "fig",
+      "e.g",
+      "i.e",
+      "http",
+      "ing",
+      "pp",
+      "figure",
+      "based"
+    ),
+    lexicon = "agile"
+  )
+  all_stop_words <- stop_words %>%
+    bind_rows(my_stop_words)
+  
+  suppressWarnings({
+    no_numbers <- papers_words %>%
+      filter(is.na(as.numeric(word)))
+  })
+  no_stop_words <- no_numbers %>%
+    anti_join(all_stop_words, by = "word") %>%
+    mutate(id = str_extract(file, "[0-9]+"))
+} else {
+  warning("No input data provided at ", here::here(data_path))
+  # create empty outputs if no input data is given
+  papers_words <- tibble(word = c("no data"))
+  no_stop_words <- tibble(id = c("no data"), word = c("no data"))
+  tidy_texts <- tibble(id = c("no data"))
+}
 ```
 
 ```{r calculate_stopword_stats, echo=FALSE}
@@ -164,7 +259,7 @@ kable(no_stop_words %>%
   arrange(desc(words)))
 ```
 
-**Note:** There was an issue with reading in one paper, which only had 15 words. Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) with the command `docker run -v $(pwd)/paper-corpus:/home/docker -it jbarlow83/ocrmypdf-tess4 --force-ocr 22015_Mazimpaka_Timpf_AGILE.pdf 22015_Mazimpaka_Timpf_AGILE_ocr.pdf` and the created file was used instead of the original.
+**Note:** In the original paper corpus there was an issue with reading in one paper, which only had 15 words. Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) with the command `docker run -v $(pwd)/paper-corpus:/home/docker -it jbarlow83/ocrmypdf-tess4 --force-ocr 22015_Mazimpaka_Timpf_AGILE.pdf 22015_Mazimpaka_Timpf_AGILE_ocr.pdf` and the created file was used instead of the original.
 
 \newpage
 
@@ -262,26 +357,34 @@ top_words <- no_stop_words %>%
 
 ```{r wordcloud_korpus,dpi=600,fig.width=12,fig.asp=0.8}
 set.seed(1)
-minimum_occurence <- 100
+if (max(top_words$n) < 100) {
+  minimum_occurence <- round(mean(top_words$n))
+} else {
+  minimum_occurence <- 100
+}
 cloud_words <- no_stop_words %>%
   group_by(word) %>%
   tally %>%
   filter(n >= minimum_occurence) %>% # 100 chosen manually
   arrange(desc(n))
 
-def.par <- par(no.readonly = TRUE)
-layout(matrix(c(1,0,2), 1, 3, byrow = TRUE), widths = c(lcm(12),lcm(6),lcm(6)))
-wordcloud(cloud_words$word, cloud_words$n,
-          max.words = Inf,
-          random.order = FALSE,
-          fixed.asp = FALSE,
-          rot.per = 0,
-          color = brewer.pal(8,"Dark2"))
-grid.table(as.matrix(top_words),
-           theme = ttheme_minimal(
-             base_size = 9,
-             padding = unit(c(5,5), "pt")))
-par(def.par)
+if (nrow(cloud_words) > 0) {
+  def.par <- par(no.readonly = TRUE)
+  layout(matrix(c(1,0,2), 1, 3, byrow = TRUE), widths = c(lcm(12),lcm(6),lcm(6)))
+  wordcloud(cloud_words$word, cloud_words$n,
+            max.words = Inf,
+            random.order = FALSE,
+            fixed.asp = FALSE,
+            rot.per = 0,
+            color = brewer.pal(8,"Dark2"))
+  grid.table(as.matrix(top_words),
+             theme = ttheme_minimal(
+               base_size = 9,
+               padding = unit(c(5,5), "pt")))
+  par(def.par)
+} else {
+  warning("No input data for wordcloud provided")
+}
 ```
 
 This word cloud is based on `r length(unique(cloud_words$word))` unique words occuring each at least `r minimum_occurence` times, all in all occuring `r sum(cloud_words$n)` times which comprises `r round(sum(cloud_words$n)/ nrow(no_stop_words) * 100)` % of non-stop words.
@@ -290,9 +393,15 @@ This word cloud is based on `r length(unique(cloud_words$word))` unique words oc
 
 ## Reproduciblity assessment
 
+```{r evaldata_file}
+evaldata_file <- "Paper_Evaluation.csv"
+```
+
+The following plots are based on the file `r evaldata_file`, the result from the manual reproducibility assessment.
+
 ```{r load_evaldata,warning=FALSE}
 category_levels <- c("0", "1", "2", "3")
-paper_evaluation_raw <- read_csv("Paper_Evaluation.csv", 
+paper_evaluation_raw <- read_csv(evaldata_file, 
     col_types = cols(
       paper = col_skip(),
       title = col_skip(),
@@ -612,7 +721,7 @@ means_years_table <- means_years %>%
         mutate(mean = round(mean, 2), 
                `paper count` = as.character(`paper count`)) %>%
         mutate(labels = str_c(year, " (n = ", `paper count`, ")")) %>%
-        column_to_rownames("labels") %>%
+        #column_to_rownames("labels") %>%
         select(mean) %>%
         t()
 ```
