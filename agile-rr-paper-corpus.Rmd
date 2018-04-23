@@ -768,7 +768,7 @@ paper_count_years <- evaldata_numeric %>%
 evaldata_years_long <- melt(evaldata_years, id.vars = c("year"))
 ggplot(evaldata_years_long, aes(year, value)) +
   geom_bar(aes(fill = variable), position = "dodge", stat = "identity") +
-  ylab("mean value") + 
+  ylab("mean value of criterion level") + 
   scale_x_continuous(breaks = evaldata_years$year,
                      labels = paste0(paper_count_years$year, 
                                      " (n=", 
@@ -778,9 +778,7 @@ ggplot(evaldata_years_long, aes(year, value)) +
   theme_tufte(base_size = 18) +
   theme(legend.position = c(0.15,0.75), 
         legend.text = element_text(size = 14)) +
-        #axis.text.y = element_text(face="bold"),
-        #axis.text.x = element_text(face="bold")) +
-  geom_hline(yintercept = seq(0,3,0.25), col = "white", lwd = 0.5) +
+  ylim(0, 3) +
   stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean, shape = "-", size = 2) +
   stat_summary(fun.y = mean, geom = "line", linetype = "dotted", mapping = aes(group = 1))
 ```
