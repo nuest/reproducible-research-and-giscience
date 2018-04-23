@@ -187,7 +187,8 @@ files <- dir(path = here::here(data_path), pattern = ".pdf$", full.names = TRUE)
 This analysis was created with the following `r length(files)` documents, `r length(which(grepl("shortpaper", files)))` of which are short papers:
 
 ```{r list_files,echo=FALSE}
-files
+# remove base name
+sapply(X = files, FUN = stringr::str_remove, USE.NAMES = FALSE, pattern = here())
 ```
 
 Read the data from PDFs and preprocess to create a [tidy](https://www.jstatsoft.org/article/view/v059i10) data structure without [stop words](https://en.wikipedia.org/wiki/Stop_words):
