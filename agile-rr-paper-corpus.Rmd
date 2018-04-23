@@ -755,7 +755,7 @@ evaldata_years <- evaldata_numeric %>%
   filter(year != 2011) %>%
   group_by(year) %>%
   summarise(input = mean(`input data`, na.rm = TRUE),
-            preprocessing = mean(preprocessing, na.rm = TRUE),
+         preprocessing = mean(preprocessing, na.rm = TRUE),
             method = mean(`method/analysis/processing`, na.rm = TRUE),
             environment = mean(`computational environment`, na.rm = TRUE),
             results = mean(results, na.rm = TRUE))
@@ -913,7 +913,8 @@ crcmstncs_ht <- crcmstncs_ht %>%
     "Hindering circumstances for reproducibility for each survey response ",
     #"with columns sorted by the respective count of 'main reason' ",
     #"and rows sorted by the answer categories in descending order"
-    "(n = ", nrow(hindering_circumstances), ")"))
+    "(n = ", nrow(hindering_circumstances),
+    "); background colour corresponds to cell text."))
 
 crcmstncs_ht
 ```
