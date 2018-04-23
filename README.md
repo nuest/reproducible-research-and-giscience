@@ -2,7 +2,7 @@
 
 Ready to use R Markdown notebook for the paper "Reproducible research and GIScience: an evaluation using AGILE conference papers".
 
-[https://peerj.com/preprints/26561v1/](https://peerj.com/preprints/26561v1/)
+[![](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-brightgreen.svg)(https://peerj.com/preprints/26561v1/)
 
 ## Reproduce Online
 
@@ -28,6 +28,21 @@ For all analysis code to work you have to complete two prerequisite steps as des
 Wihtout data and API key, only some figures can be reproduced.
 
 ![](binder-screenshot-03.png)
+
+## Reproduce locally
+
+Install [Docker CE](https://www.docker.com/community-edition) or a compatible tool for building an image based on a `Dockerfile` and running a container based on the image.
+Download the project files, open a command line in the root directory (where this file is), and run the following commands:
+
+```bash
+# build the image
+docker build --tag rr-giscience .
+# run the image
+docker run -it -p 8888:8888 rr-giscience
+```
+
+Open a browser at http://localhost:8888 or click on the login link shown in the console.
+It will show the Jupyter start page as shown in the first screenshot of the instructions in [#reproduce-online](Reproduce online), which you can use as described in that section.
 
 ## Files in this repository
 
