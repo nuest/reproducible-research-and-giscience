@@ -83,7 +83,7 @@ Sys.setenv(SPRINGER_API_KEY = "<your key>")
 
 ```{r check_api_key}
 if (is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA)))
-  warning("API key is not set, please check the section \"Prerequisites\" of the Rmd file.")
+  warning("API key is not set, please check section \"Prerequisites\" of the Rmd file.")
 ```
 
 ```{r data_path}
