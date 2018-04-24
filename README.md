@@ -55,6 +55,21 @@ It will show the Jupyter start page as shown in the first screenshot of the inst
 - `Dockerfile`: A recipe for the computational environment using [Docker](https://en.wikipedia.org/wiki/Docker_(software)).
 - `install.R`: R script file executed during creation of the Docker image to install required dependencies.
 
+## Deposition on Zenodo
+
+This repository is archived on Zenodo: [https://doi.org/10.5281/zenodo.1227261](https://doi.org/10.5281/zenodo.1227261)
+
+The Zenodo repository includes the complete git repository so that readers may investigate the history of the analysis starting with [the supplemental information of the PeerJ preprint](https://peerj.com/preprints/26561/#supplementary-material).
+
+The deposited archive was created based on the tag `1` (matching the Zenodo version number) with the following commands:
+
+```bash
+git clone https://github.com/nuest/reproducible-research-and-giscience.git
+cd reproducible-research-and-giscience
+git checkout 1
+zip -r reproducible-reserach-and-giscience.zip .
+```
+
 ## License
 
 The documents in this repository are licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
