@@ -4,7 +4,7 @@ Ready to use R Markdown notebook for the paper "Reproducible research and GIScie
 
 [![](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-brightgreen.svg)](https://peerj.com/preprints/26561v1/)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227261.svg)](https://doi.org/10.5281/zenodo.1227261)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227260.svg)](https://doi.org/10.5281/zenodo.1227260)
 
 ## Reproduce Online
 
@@ -57,7 +57,7 @@ It will show the Jupyter start page as shown in the first screenshot of the inst
 
 ## Deposition on Zenodo
 
-This repository is archived on Zenodo: [https://doi.org/10.5281/zenodo.1227261](https://doi.org/10.5281/zenodo.1227261)
+This repository is archived on Zenodo: [https://doi.org/10.5281/zenodo.1227260](https://doi.org/10.5281/zenodo.1227260)
 
 The Zenodo repository includes the complete git repository so that readers may investigate the history of the analysis starting with [the supplemental information of the PeerJ preprint](https://peerj.com/preprints/26561/#supplementary-material).
 
