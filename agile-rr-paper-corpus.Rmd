@@ -93,7 +93,7 @@ data_path <- "paper-corpus"
 ### Data
 
 The data for the analysis is required in form of a directory with PDF files.
-Add the PDFs to a directory called ` `r data_path` ` next to this file.
+Add the PDFs to a directory called ` `r data_path` ` (path automatically inserted here based on above variable) next to the file `agile-rr-paper-corpus.Rmd` (this file).
 
 You can contact the original paper authors and ask for the test dataset to reproduce the full analysis.
 Alternatively, you can download a selection of AGILE short papers to test the workflow using the code below which is _not_ executed by default.
