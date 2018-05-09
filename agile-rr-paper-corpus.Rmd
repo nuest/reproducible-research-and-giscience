@@ -335,7 +335,7 @@ kable(word_counts_sums,
 
 \newpage
 
-## Figure: Word cloud of test corpus papers (left), and top words (right)
+## Figure: Word cloud of test corpus papers (A), and top words (B)
 
 ```{r top_words}
 countPapersUsingWord <- function(the_word) {
@@ -357,7 +357,7 @@ top_words <- no_stop_words %>%
   add_column(place = c(1:nrow(.)), .before = 0)
 ```
 
-```{r wordcloud_korpus,dpi=600,fig.width=12,fig.asp=0.8}
+```{r Fig1-A,dpi=600,fig.width=6,fig.asp=1.8}
 set.seed(1)
 if (max(top_words$n) < 100) {
   minimum_occurence <- round(mean(top_words$n))
@@ -371,25 +371,27 @@ cloud_words <- no_stop_words %>%
   arrange(desc(n))
 
 if (nrow(cloud_words) > 0) {
-  def.par <- par(no.readonly = TRUE)
-  layout(matrix(c(1,0,2), 1, 3, byrow = TRUE), widths = c(lcm(12),lcm(6),lcm(6)))
   wordcloud(cloud_words$word, cloud_words$n,
             max.words = Inf,
             random.order = FALSE,
             fixed.asp = FALSE,
             rot.per = 0,
             color = brewer.pal(8,"Dark2"))
-  grid.table(as.matrix(top_words),
-             theme = ttheme_minimal(
-               base_size = 9,
-               padding = unit(c(5,5), "pt")))
-  par(def.par)
 } else {
   warning("No input data for wordcloud provided")
 }
 ```
 
 This word cloud is based on `r length(unique(cloud_words$word))` unique words occuring each at least `r minimum_occurence` times, all in all occuring `r sum(cloud_words$n)` times which comprises `r round(sum(cloud_words$n)/ nrow(no_stop_words) * 100)` % of non-stop words.
+
+```{r Fig1-B,dpi=600,fig.width=6,fig.asp=1.8}
+top_table <- grid.table(as.matrix(top_words),
+           theme = ttheme_minimal(
+             base_size = 9,
+             padding = unit(c(5,5), "pt")))
+grid.newpage()
+grid.draw(top_table)
+```
 
 \newpage
 
@@ -632,9 +634,9 @@ The preprocessing has `r sum(!is.na(evaldata_numeric$preprocessing))` values, wi
 
 \newpage
 
-## Figure: Results of the evaluation of the corpus of 32 papers
+## Figure: Results of reproducibility assessment
 
-```{r barplot_criteria,fig.width=10}
+```{r Fig3,fig.width=10}
 # match the colours to time series plot below
 colours <- RColorBrewer::brewer.pal(length(categoryColumns), "Set1")
 level_names <- c("0", "1", "2", "3", "NA")
@@ -649,15 +651,15 @@ criteriaBarplot = function(data, main, colour) {
 
 par(mfrow = c(1,length(categoryColumns)))
 criteriaBarplot(paper_evaluation$`input data`,
-                main = "Input data", colour = 1)
+                main = "(A) Input data", colour = 1)
 criteriaBarplot(paper_evaluation$`preprocessing`, 
-                main = "Preprocessing", colour = 2)
+                main = "(B) Preprocessing", colour = 2)
 criteriaBarplot(paper_evaluation$`method/analysis/processing`,
-                main = "Methods/Analysis/\nProcessing", colour = 3)
+                main = "(C) Methods/Analysis/\nProcessing", colour = 3)
 criteriaBarplot(paper_evaluation$`computational environment`,
-                main = "Computational\nEnvironment", colour = 4)
+                main = "(D) Computational\nEnvironment", colour = 4)
 criteriaBarplot(paper_evaluation$results,
-                main = "Results", colour = 5)
+                main = "(E) Results", colour = 5)
 ```
 
 ```{r criteria_numbers}
@@ -748,9 +750,9 @@ kable(means_years_table,
 
 \newpage
 
-## Figure: Reproducibility levels over time
+## Figure: Mean reproducibility levels per category over time
 
-```{r evaldata_by_year_plot,fig.width=10,dpi=300}
+```{r Fig4,fig.width=10,dpi=300}
 evaldata_years <- evaldata_numeric %>%
   filter(conceptual == FALSE) %>%
   filter(year != 2011) %>%
@@ -788,7 +790,7 @@ ggplot(evaldata_years_long, aes(year, value)) +
 
 ## Figure: Author survey results on the importance of reproducibility
 
-```{r survey_results_considered_reproducibility,warning=FALSE,fig.width=12,dpi=300}
+```{r Fig5,warning=FALSE,fig.width=12,dpi=300}
 Reproducibility_Survey <- read_delim(file = "Reproducibility_Survey.csv", 
     delim = ";", 
     escape_double = FALSE, 
