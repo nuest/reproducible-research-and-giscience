@@ -46,8 +46,9 @@ library("rvest")
 library("jsonlite")
 library("reshape2")
 library("ggthemes")
-library("gridExtra")
 library("grid")
+library("gridBase")
+library("gridExtra")
 library("kableExtra")
 library("devtools")
 library("rlang")
@@ -357,7 +358,7 @@ top_words <- no_stop_words %>%
   add_column(place = c(1:nrow(.)), .before = 0)
 ```
 
-```{r Fig1-A,dpi=600,fig.width=6,fig.asp=1.8}
+```{r Fig1,dpi=600,fig.width=7,fig.asp=0.85}
 set.seed(1)
 if (max(top_words$n) < 100) {
   minimum_occurence <- round(mean(top_words$n))
@@ -370,28 +371,41 @@ cloud_words <- no_stop_words %>%
   filter(n >= minimum_occurence) %>% # 100 chosen manually
   arrange(desc(n))
 
-if (nrow(cloud_words) > 0) {
+if (nrow(cloud_words) > 0) {  
+  def.par <- par(no.readonly = TRUE)
+  par(mar = rep(0,4))
+  nf <- layout(mat = matrix(data = c(1,2,3,4), nrow = 2, ncol = 2, byrow = TRUE),
+         widths = c(lcm(8),lcm(8)),
+         heights = c(lcm(0.5),lcm(11)))
+  #layout.show(nf)
+  plot.new()
+  text(0.5, 0.5, "A", font = 2)
+  plot.new()
+  text(0.5, 0.5, "B", font = 2)
+  
   wordcloud(cloud_words$word, cloud_words$n,
             max.words = Inf,
             random.order = FALSE,
             fixed.asp = FALSE,
             rot.per = 0,
             color = brewer.pal(8,"Dark2"))
+  
+  frame() # thx to https://stackoverflow.com/a/25194694/261210
+  vps <- baseViewports()
+  pushViewport(vps$inner, vps$figure, vps$plot)
+  grid.table(as.matrix(top_words),
+             theme = ttheme_minimal(base_size = 11,
+                                    padding = unit(c(10,5), "pt"))
+             )
+  popViewport(3)
+
+  par(def.par)
 } else {
   warning("No input data for wordcloud provided")
 }
 ```
 
 This word cloud is based on `r length(unique(cloud_words$word))` unique words occuring each at least `r minimum_occurence` times, all in all occuring `r sum(cloud_words$n)` times which comprises `r round(sum(cloud_words$n)/ nrow(no_stop_words) * 100)` % of non-stop words.
-
-```{r Fig1-B,dpi=600,fig.width=6,fig.asp=1.8}
-top_table <- grid.table(as.matrix(top_words),
-           theme = ttheme_minimal(
-             base_size = 9,
-             padding = unit(c(5,5), "pt")))
-grid.newpage()
-grid.draw(top_table)
-```
 
 \newpage
 
@@ -651,15 +665,15 @@ criteriaBarplot = function(data, main, colour) {
 
 par(mfrow = c(1,length(categoryColumns)))
 criteriaBarplot(paper_evaluation$`input data`,
-                main = "(A) Input data", colour = 1)
+                main = "A: Input data", colour = 1)
 criteriaBarplot(paper_evaluation$`preprocessing`, 
-                main = "(B) Preprocessing", colour = 2)
+                main = "B: Preprocessing", colour = 2)
 criteriaBarplot(paper_evaluation$`method/analysis/processing`,
-                main = "(C) Methods/Analysis/\nProcessing", colour = 3)
+                main = "C: Methods/Analysis/\nProcessing", colour = 3)
 criteriaBarplot(paper_evaluation$`computational environment`,
-                main = "(D) Computational\nEnvironment", colour = 4)
+                main = "D: Computational\nEnvironment", colour = 4)
 criteriaBarplot(paper_evaluation$results,
-                main = "(E) Results", colour = 5)
+                main = "E: Results", colour = 5)
 ```
 
 ```{r criteria_numbers}
