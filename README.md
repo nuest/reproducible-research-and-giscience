@@ -16,11 +16,11 @@ On the Jupyter page that opens, select "New > RStudio".
 
 ![](binder-screenshot-01.png)
 
-In RStudio, select "Knit > Knit to PDF" to render the document. You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
+In RStudio, open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
+
+Then select "Knit > Knit to PDF" to render the document. You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
 
 ![](binder-screenshot-02.png)
-
-Then open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
 
 For all analysis code to work you have to complete two prerequisite steps as described in the main analysis file:
 
