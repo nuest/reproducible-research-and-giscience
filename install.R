@@ -6,6 +6,7 @@ install.packages("ggthemes")
 install.packages("kableExtra")
 install.packages("huxtable")
 install.packages("here")
+install.packages("gridBase")
 
 # Install LaTeX packages
 tinytex::tlmgr_install("siunitx")
