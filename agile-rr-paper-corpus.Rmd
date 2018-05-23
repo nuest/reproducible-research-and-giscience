@@ -262,7 +262,14 @@ kable(no_stop_words %>%
   arrange(desc(words)))
 ```
 
-**Note:** In the original paper corpus there was an issue with reading in one paper, which only had 15 words. Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) with the command `docker run -v $(pwd)/paper-corpus:/home/docker -it jbarlow83/ocrmypdf-tess4 --force-ocr 22015_Mazimpaka_Timpf_AGILE.pdf 22015_Mazimpaka_Timpf_AGILE_ocr.pdf` and the created file was used instead of the original.
+**Note:** In the original paper corpus there was an issue with reading in one paper, which only had 15 words. Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) with the command 
+
+```
+docker run -v $(pwd)/paper-corpus:/home/docker -it jbarlow83/ocrmypdf-tess4 \
+  --force-ocr 22015_Mazimpaka_Timpf_AGILE.pdf 22015_Mazimpaka_Timpf_AGILE_ocr.pdf
+```
+
+and the created file was used instead of the original.
 
 \newpage
 
