@@ -155,7 +155,7 @@ files <- lapply(X = names(proceedings_links_any), FUN = function(x) {
 The **text analysis** is based the R package [`tidytext`](https://cran.r-project.org/package=tidytext) from the [`tidyverse`](https://www.tidyverse.org/) suite of packages and uses the [`dplyr`](http://dplyr.tidyverse.org/) grammar.
 Read the [`tidytext` tutorial](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html) to learn about the used functions and concepts.
 
-The **plots and tables** of survey data and evaluation use the packages [`ggplot2`](http://ggplot2.tidyverse.org/) and [`knitr::kable()`](https://yihui.name/knitr/)/[`kableExtra`](https://cran.r-project.org/package=kableExtra).
+The **plots and tables** of survey data and evaluation use the packages [`ggplot2`](http://ggplot2.tidyverse.org/), [`knitr::kable()`](https://yihui.name/knitr/), [`huxtable`](https://hughjonesd.github.io/huxtable/), and [`kableExtra`](https://cran.r-project.org/package=kableExtra).
 
 \newpage
 
@@ -905,7 +905,7 @@ hindering_circumstances <- hindering_circumstances %>%
   # sort the rows by the colum with most "main reason" answers
   arrange(desc(!! rlang::sym(main_reason_counts$circumstance[[1]])))
 
-crcmstncs_ht <- as_hux(hindering_circumstances)
+crcmstncs_ht <- huxtable::as_hux(hindering_circumstances)
 # configure font size and cell padding
 font_size(crcmstncs_ht) <- 8
 
