@@ -8,6 +8,10 @@ install.packages("huxtable")
 install.packages("here")
 install.packages("gridBase")
 
+# install fixed dev version of tinytex
+devtools::install_github('yihui/tinytex', ref = "1cce49dee825376b71c4ea7b046980cc05cdc10a")
+tinytex::reinstall_tinytex(force = TRUE)
+
 # Install LaTeX packages
 tinytex::tlmgr_install("siunitx")
 tinytex::tlmgr_install("xcolor")
