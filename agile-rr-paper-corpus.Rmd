@@ -104,7 +104,7 @@ dir.create(here::here(data_path))
 
 # harvest links to PDFs, select more years for more data, 
 # e.g. c(2003:2017) and increase max_files_per_year
-years <- c(2017)
+years <- c(2015:2017)
 max_files_per_year <- 10
 base_url <- "https://agile-online.org/index.php/conference/proceedings/proceedings-"
 proceedings_urls <- sapply(X = as.character(years),
