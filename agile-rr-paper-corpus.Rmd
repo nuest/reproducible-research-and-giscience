@@ -61,11 +61,21 @@ library("httr")
 devtools::session_info(include_base = TRUE)
 ```
 
-This document is versioned in a public [git](https://git-scm.com/) repository, [https://github.com/nuest/reproducible-research-and-giscience](https://github.com/nuest/reproducible-research-and-giscience). The current revision is `r system2("git", "rev-parse --short HEAD", stdout = TRUE, stderr = TRUE)` with the version tag `r system2("git", "tag --list --points-at HEAD", stdout = TRUE, stderr = TRUE)`.
+This document is versioned in a public [git](https://git-scm.com/) repository, [https://github.com/nuest/reproducible-research-and-giscience](https://github.com/nuest/reproducible-research-and-giscience).
+The current revision is `r system2("git", "rev-parse --short HEAD", stdout = TRUE, stderr = TRUE)` with the version tag `r system2("git", "tag --list --points-at HEAD", stdout = TRUE, stderr = TRUE)`.
 
 \newpage
 
 ## Prerequisites
+
+### Software dependencies
+
+This document does not install the required R packages by default.
+You can run the script `install.R` to install all required dependencies on a new R installation, or use `install.packages(..)` to install missing R packages.
+
+```{r install_r, eval=FALSE}
+source("install.R")
+```
 
 ### API key
 
