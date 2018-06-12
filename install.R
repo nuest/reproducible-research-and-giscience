@@ -1,5 +1,6 @@
 # Install CRAN packages
 install.packages("pdftools")
+install.packages("tidyverse")
 install.packages("tidytext")
 install.packages("wordcloud")
 install.packages("ggthemes")
@@ -10,7 +11,7 @@ install.packages("gridBase")
 install.packages("gridExtra")
 
 # install fixed dev version of tinytex
-#install.packages("devtools")
+install.packages("devtools")
 devtools::install_github('yihui/tinytex', ref = "1cce49dee825376b71c4ea7b046980cc05cdc10a")
 tinytex::install_tinytex(force = TRUE)
 
