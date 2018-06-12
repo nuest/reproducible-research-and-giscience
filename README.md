@@ -18,7 +18,8 @@ On the Jupyter page that opens, select "New > RStudio".
 
 In RStudio, open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
 
-Then select "Knit > Knit to PDF" to render the document. You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
+Then select "Knit > Knit to PDF" to render the document.
+You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
 
 ![](binder-screenshot-02.png)
 
@@ -32,6 +33,16 @@ Wihtout data and API key, only some figures can be reproduced.
 ![](binder-screenshot-03.png)
 
 ## Reproduce locally
+
+Open the _main analysis file_ `agile-rr-paper-corpus.Rmd` with [RStudio](https://www.rstudio.com/products/rstudio/).
+Then select "Knit > Knit to PDF" to render the document.
+If you have errors rendering the whole PDF, try running each [chunk](https://rmarkdown.rstudio.com/authoring_rcodechunks.html) to locate the problem.
+
+The document does _not_ include code to install required packages.
+Run the code in the file `install.R` to install all dependencies.
+You can skip the installation of `tinytex` and the LaTeX packages if you knit to HTML or run the chunks directly from RStudio.
+
+## Reproduce locally with Docker
 
 Install [Docker CE](https://www.docker.com/community-edition) or a compatible tool for building an image based on a `Dockerfile` and running a container based on the image.
 Download the project files, open a command line in the root directory (where this file is), and run the following commands:

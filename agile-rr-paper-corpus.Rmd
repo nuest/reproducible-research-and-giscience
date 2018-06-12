@@ -70,6 +70,9 @@ This document is versioned in a public [git](https://git-scm.com/) repository, [
 ### API key
 
 An API key is needed for accessing the [Springer API](https://dev.springer.com/) to automatically retrieve the number of full papers.
+Go to the Springer API website and sign up.
+Then create a new application (using any "name") under the top menu "Applications".
+The "user key" is the API key.
 Create a file `.Renviron` next to this document and add the following line:
 
 ```
@@ -164,6 +167,7 @@ The **plots and tables** of survey data and evaluation use the packages [`ggplot
 _If you do not have the original data or do not download the data, you cannot reproduce the text analysis part of the paper, i.e. wordcloud and terms frequency analysis._ **You can still reproduce the other figures**.
 
 To create the PDF of the reproducibility package based on this document you can run the following commandsin a new R session after completing the prerequisites with the original paper corpus data.
+If you have problems rendering the PDF and execute each chunk independently, _skip the following chunk_.
 
 ```{r render_with_rmarkdown,eval=FALSE}
 require("knitr")
@@ -337,7 +341,9 @@ word_counts_sums <- rbind(word_counts_sums, word_counts_sums_total)
 kable(word_counts_sums,
       caption = paste0("Reproducible research-related keywords in the corpus,",
                        " ordered by sum of matches per paper"),
-      format = "latex", booktabs = TRUE) %>%
+      format = "latex", # change output format to "html" when running the chunk manually
+      #format = "html",
+      booktabs = TRUE) %>%
   kableExtra::landscape()
 ```
 
@@ -454,7 +460,9 @@ options(knitr.kable.NA = '-')
 kable(paper_evaluation_raw %>% 
         select(-matches("reviewer")) %>%
         mutate(`short paper` = if_else(`short paper` == TRUE, "X", "")),
-      format = "latex", booktabs = TRUE,
+      format = "latex", # change output format to "html" when running the chunk manually
+      #format = "html",
+      booktabs = TRUE,
       caption = paste0("Reproducibility levels for paper corpus; ",
                        "'-' is category not available")) %>%
   kable_styling(latex_options = "scale_down")
@@ -547,7 +555,7 @@ proceedings_links_short_and_full_papers <- lapply(X = proceedings_html,
 ```
 
 Get the ISBNs of AGILE proceedings via harvesting AGILE and Springer websites.
-Then query [Springer API](https://dev.springer.com/) for number of chapters in each book to get the full paper count.
+Then query [Springer API](https://dev.springer.com/) (see section "API key" above) for number of chapters in each book to get the full paper count.
 
 ```{r harvest_springer_api,cache=TRUE}
 if(is.na(Sys.getenv("SPRINGER_API_KEY", unset = NA))) {
