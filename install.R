@@ -7,10 +7,12 @@ install.packages("kableExtra")
 install.packages("huxtable")
 install.packages("here")
 install.packages("gridBase")
+install.packages("gridExtra")
 
 # install fixed dev version of tinytex
+#install.packages("devtools")
 devtools::install_github('yihui/tinytex', ref = "1cce49dee825376b71c4ea7b046980cc05cdc10a")
-tinytex::reinstall_tinytex(force = TRUE)
+tinytex::install_tinytex(force = TRUE)
 
 # Install LaTeX packages
 tinytex::tlmgr_install("siunitx")
