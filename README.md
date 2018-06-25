@@ -18,15 +18,15 @@ On the Jupyter page that opens, select "New > RStudio".
 
 In RStudio, open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
 
-Then select "Knit > Knit to PDF" to render the document.
-You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
+Then select "Knit > Knit to HTML" to render the document, which includes the complete analysis workflow, and display it in your browser.
+You may use other output formats, like PDF, which is needed to create the figures for the original article.
 
 ![](binder-screenshot-02.png)
 
 For all analysis code to work you have to complete two prerequisite steps as described in the main analysis file:
 
 - Configure a Springer API key
-- Upload data to the workspace
+- Upload data to the workspace (alternatively: download sample data, see main analysis file section "Data")
 
 Wihtout data and API key, only some figures can be reproduced.
 
@@ -36,7 +36,7 @@ Wihtout data and API key, only some figures can be reproduced.
 
 Open the _main analysis file_ `agile-rr-paper-corpus.Rmd` with [RStudio](https://www.rstudio.com/products/rstudio/).
 Then select "Knit > Knit to PDF" to render the document.
-If you have errors rendering the whole PDF, try running each [chunk](https://rmarkdown.rstudio.com/authoring_rcodechunks.html) to locate the problem.
+If you have errors rendering the whole PDF, try running each [chunk](https://rmarkdown.rstudio.com/authoring_rcodechunks.html) to locate the problem or use "Knit to HTML".
 
 The document does _not_ include code to install required packages.
 Run the code in the file `install.R` to install all dependencies.
