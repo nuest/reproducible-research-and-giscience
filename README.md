@@ -10,7 +10,7 @@ Ready to use R Markdown notebook for the paper "Reproducible research and GIScie
 
 Click the "Binder" button below to open the notebook on [binder.org](https://mybinder.org/).
 
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/5)
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/6)
 
 On the Jupyter page that opens, select "New > RStudio".
 
@@ -72,12 +72,12 @@ This repository is archived on Zenodo: [https://doi.org/10.5281/zenodo.1227260](
 
 The Zenodo repository includes the complete git repository so that readers may investigate the history of the analysis starting with [the supplemental information of the PeerJ preprint](https://peerj.com/preprints/26561/#supplementary-material).
 
-The deposited archive was created based on the tag `5` (matching the Zenodo version number) with the following commands:
+The deposited archive was created based on the tag `6` (matching the Zenodo version number) with the following commands:
 
 ```bash
 git clone https://github.com/nuest/reproducible-research-and-giscience.git
 cd reproducible-research-and-giscience
-git checkout 5
+git checkout 6
 zip -r reproducible-reserach-and-giscience.zip .
 ```
 
