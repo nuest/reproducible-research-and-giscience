@@ -12,7 +12,7 @@ Ready to use R Markdown notebook for the paper "Reproducible research and GIScie
 
 Click the "Binder" button below to open the notebook on [binder.org](https://mybinder.org/).
 
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/6)
 
 On the Jupyter page that opens, select "New > RStudio".
 
