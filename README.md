@@ -2,9 +2,11 @@
 
 Ready to use R Markdown notebook for the paper "Reproducible research and GIScience: an evaluation using AGILE conference papers".
 
-[![](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-brightgreen.svg)](https://peerj.com/preprints/26561v1/)
+[![Article DOI](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fdoi.org%2F10.7717%2Fpeerj.5072-brightgreen.svg)](https://doi.org/10.7717/peerj.5072)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227260.svg)](https://doi.org/10.5281/zenodo.1227260)
+[![Preprint](https://img.shields.io/badge/PeerJ%20Preprint-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-yellow.svg)](https://peerj.com/preprints/26561v1/)
+
+[![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227260.svg)](https://doi.org/10.5281/zenodo.1227260)
 
 ## Reproduce Online
 
