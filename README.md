@@ -27,10 +27,10 @@ You may use other output formats, like PDF, which is needed to create the figure
 
 For all analysis code to work you have to complete two prerequisite steps as described in the main analysis file:
 
-- Configure a Springer API key
+- Configure a [Springer API](https://dev.springer.com/) key
 - Upload data to the workspace (alternatively: download sample data, see main analysis file section "Data")
 
-Wihtout data and API key, only some figures can be reproduced.
+Without data and API key, not all some figures can be reproduced.
 
 ![](binder-screenshot-03.png)
 
@@ -58,6 +58,20 @@ docker run -it -p 8888:8888 rr-giscience
 
 Open a browser at http://localhost:8888 or click on the login link shown in the console.
 It will show the Jupyter start page as shown in the first screenshot of the instructions in [Reproduce online](#reproduce-online), which you can use as described in that section.
+
+## Reproduce locally with repo2docker
+
+[Install](https://repo2docker.readthedocs.io/en/latest/install.html) [`jupyter-repo2docker`](https://github.com/jupyter/repo2docker) and run the following command:
+
+```bash
+repo2docker --ref 6 https://github.com/nuest/reproducible-research-and-giscience
+```
+
+You may also provide a [Springer API](https://dev.springer.com/) key as an environment variable:
+
+```bash
+repo2docker --ref 6 -e SPRINGER_API_KEY=<your key> https://github.com/nuest/reproducible-research-and-giscience
+```
 
 ## Files in this repository
 
