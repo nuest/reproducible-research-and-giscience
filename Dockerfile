@@ -23,8 +23,5 @@ RUN echo MRAN=$MRAN >> /etc/environment \
 # return back to regular user
 USER ${NB_USER}
 
-# update installed packages
-RUN R --quiet -e "update.packages(ask = FALSE)"
-
 # run any install.R script we find
 RUN if [ -f install.R ]; then R --quiet -f install.R; fi

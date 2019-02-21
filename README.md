@@ -2,15 +2,17 @@
 
 Ready to use R Markdown notebook for the paper "Reproducible research and GIScience: an evaluation using AGILE conference papers".
 
-[![](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-brightgreen.svg)](https://peerj.com/preprints/26561v1/)
+[![Article DOI](https://img.shields.io/badge/PeerJ-https%3A%2F%2Fdoi.org%2F10.7717%2Fpeerj.5072-brightgreen.svg)](https://doi.org/10.7717/peerj.5072)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227260.svg)](https://doi.org/10.5281/zenodo.1227260)
+[![Preprint](https://img.shields.io/badge/PeerJ%20Preprint-https%3A%2F%2Fpeerj.com%2Fpreprints%2F26561v1%2F-yellow.svg)](https://peerj.com/preprints/26561v1/)
+
+[![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227260.svg)](https://doi.org/10.5281/zenodo.1227260)
 
 ## Reproduce Online
 
 Click the "Binder" button below to open the notebook on [binder.org](https://mybinder.org/).
 
-[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/6)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nuest/reproducible-research-and-giscience/6)
 
 On the Jupyter page that opens, select "New > RStudio".
 
@@ -18,17 +20,17 @@ On the Jupyter page that opens, select "New > RStudio".
 
 In RStudio, open the file `agile-rr-paper-corpus.Rmd`, the _main analysis file_.
 
-Then select "Knit > Knit to PDF" to render the document.
-You may use other output formats, like HTML, but not that the tables are bespoke for PDF output.
+Then select "Knit > Knit to HTML" to render the document, which includes the complete analysis workflow, and display it in your browser.
+You may use other output formats, like PDF, which is needed to create the figures for the original article.
 
 ![](binder-screenshot-02.png)
 
 For all analysis code to work you have to complete two prerequisite steps as described in the main analysis file:
 
-- Configure a Springer API key
-- Upload data to the workspace
+- Configure a [Springer API](https://dev.springer.com/) key
+- Upload data to the workspace (alternatively: download sample data, see main analysis file section "Data")
 
-Wihtout data and API key, only some figures can be reproduced.
+Without data and API key, not all some figures can be reproduced.
 
 ![](binder-screenshot-03.png)
 
@@ -36,7 +38,7 @@ Wihtout data and API key, only some figures can be reproduced.
 
 Open the _main analysis file_ `agile-rr-paper-corpus.Rmd` with [RStudio](https://www.rstudio.com/products/rstudio/).
 Then select "Knit > Knit to PDF" to render the document.
-If you have errors rendering the whole PDF, try running each [chunk](https://rmarkdown.rstudio.com/authoring_rcodechunks.html) to locate the problem.
+If you have errors rendering the whole PDF, try running each [chunk](https://rmarkdown.rstudio.com/authoring_rcodechunks.html) to locate the problem or use "Knit to HTML".
 
 The document does _not_ include code to install required packages.
 Run the code in the file `install.R` to install all dependencies.
@@ -56,6 +58,20 @@ docker run -it -p 8888:8888 rr-giscience
 
 Open a browser at http://localhost:8888 or click on the login link shown in the console.
 It will show the Jupyter start page as shown in the first screenshot of the instructions in [Reproduce online](#reproduce-online), which you can use as described in that section.
+
+## Reproduce locally with repo2docker
+
+[Install](https://repo2docker.readthedocs.io/en/latest/install.html) [`jupyter-repo2docker`](https://github.com/jupyter/repo2docker) and run the following command:
+
+```bash
+repo2docker --ref 6 https://github.com/nuest/reproducible-research-and-giscience
+```
+
+You may also provide a [Springer API](https://dev.springer.com/) key as an environment variable:
+
+```bash
+repo2docker --ref 6 -e SPRINGER_API_KEY=<your key> https://github.com/nuest/reproducible-research-and-giscience
+```
 
 ## Files in this repository
 
