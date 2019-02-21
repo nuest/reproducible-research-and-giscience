@@ -97,6 +97,8 @@ git checkout 6
 zip -r reproducible-reserach-and-giscience.zip .
 ```
 
+The only discrepancy in Zenodo versions and tags is the tag `6` which maps to version `6-fixed` on Zenodo, and the tag `6-unfixed` which maps to Zenodo version `6`, see [#7](https://github.com/nuest/reproducible-research-and-giscience/pull/7) for changes.
+
 ## License
 
 The documents in this repository are licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
