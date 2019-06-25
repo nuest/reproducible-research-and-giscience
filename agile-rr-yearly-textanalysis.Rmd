@@ -1,0 +1,567 @@
+---
+title: 'Text-analysis and visualisations for AGILE conference papers 2018-2019'
+author: "Daniel Nüst"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+abstract: Text analysis of [AGILE conference](https://agile-online.org/conference/) papers - source code at [https://github.com/nuest/reproducible-research-and-giscience](https://github.com/nuest/reproducible-research-and-giscience).
+---
+
+## Prerequisites
+
+### Software dependencies
+
+This document does not install the required R packages by default.
+You can run the script `install.R` to install all required dependencies on a new R installation, or use `install.packages(..)` to install missing R packages.
+
+```{r install_r, eval=FALSE}
+source("install.R")
+```
+
+The text analysis is based the R package [`tidytext`](https://cran.r-project.org/package=tidytext) from the [`tidyverse`](https://www.tidyverse.org/) suite of packages and uses the [`dplyr`](http://dplyr.tidyverse.org/) grammar.
+Read the [`tidytext` tutorial](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html) to learn about the used functions and concepts.
+
+The plots and tables of survey data and evaluation use the packages [`ggplot2`](http://ggplot2.tidyverse.org/).
+
+Required libraries and runtime environment description.
+
+```{r load_libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library("pdftools")
+library("stringr")
+library("knitr")
+library("tibble")
+library("tidytext")
+library("purrr")
+library("dplyr")
+library("wordcloud")
+library("RColorBrewer")
+library("readr")
+library("ggplot2")
+library("rvest")
+library("ggthemes")
+library("grid")
+library("gridBase")
+library("gridExtra")
+library("devtools")
+library("rlang")
+library("huxtable")
+library("here")
+library("httr")
+library("googledrive")
+library("SnowballC")
+```
+
+### Seed
+
+Seed is set for making word cloud generation reproducible.
+
+```{r seed}
+set.seed(1)
+```
+
+### Data
+
+```{r data_path}
+data_path <- "all-manuscripts"
+```
+
+The data for the analysis is required in form of directories with PDF files of all conference papers and poster abstracts.
+Due to copyright of full papers, the full paper PDFs must be manually added to the respective directory.
+Short papers and poster abstracts are dowloaded automatically.
+
+Add the PDFs to a directory called ` `r data_path` ` this file with one subdirectoy per year:
+
+```{r years}
+list.files("all-manuscripts/")
+```
+
+The following downloads of AGILE short papers are _not_ executed by default.
+
+```{r data_2018,eval=FALSE}
+dir.create(here::here(data_path, "2018"))
+
+page <- read_html("https://agile-online.org/programme-2018/accepted-papers-and-posters-2018")
+
+all_links <- page %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    as.list()
+
+drive_links <- all_links[str_detect(string = all_links, pattern = "drive.google")]
+drive_links[sapply(drive_links, is.null)] <- NULL
+
+drive_ids <- lapply(drive_links, as_id)
+lapply(drive_ids, drive_download, overwrite = TRUE)
+```
+
+```{r data_2019,eval=FALSE}
+dir.create(here::here(data_path, "2019"))
+
+page <- read_html("https://agile-online.org/conference-2019/programme-2019/accepted-papers-and-posters-2019")
+
+all_links <- page %>%
+    html_nodes(css = "a") %>%
+    html_attr("href") %>%
+    as.list()
+
+pdf_links <- all_links[str_detect(string = all_links, pattern = ".*Upload_your_PDF.*")]
+pdf_links[sapply(pdf_links, is.null)] <- NULL
+pdf_links <- paste0("https://agile-online.org", pdf_links)
+
+for (link in pdf_links) {
+  download.file(url = link,
+                destfile = here::here(data_path,
+                                      "2019",
+                                      stringr::str_extract(link, "([^/]+$)")))
+}
+```
+
+## 2018
+
+### Loading and cleaning
+
+```{r load_filenames_2018}
+files_2018 <- dir(path = here::here(data_path, "2018"), pattern = ".pdf$", full.names = TRUE)
+```
+
+This analysis was created with the following `r length(files_2018)` documents:
+
+```{r list_files_2018,echo=FALSE}
+# remove base name
+sapply(X = files_2018, FUN = stringr::str_remove, USE.NAMES = FALSE, pattern = here::here(data_path, "2018"))
+```
+
+Count the types of submissions:
+
+```{r manuscript_counts_2018}
+full_papers_2018 <- length(str_match(files_2018, "10.100")[!is.na(str_match(files_2018, "10.100"))])
+other_papers_2018 <- length(str_match(files_2018, "10.100")[is.na(str_match(files_2018, "10.100"))])
+```
+
+There are `r full_papers_2018` full papers and `r other_papers_2018` short papers/posters.
+
+Read the data from PDFs and preprocess to create a [tidy](https://www.jstatsoft.org/article/view/v059i10) data structure without [stop words](https://en.wikipedia.org/wiki/Stop_words):
+
+```{r stop_words}
+my_stop_words <- tibble(
+  word = c(
+    "et",
+    "al",
+    "fig",
+    "e.g",
+    "i.e",
+    "http",
+    "ing",
+    "pp",
+    "figure",
+    "table",
+    "based",
+    "lund", # location of conference 2018
+    "https"
+  ),
+  lexicon = "agile"
+)
+all_stop_words <- stop_words %>%
+  bind_rows(my_stop_words)
+```
+
+```{r tidy_data_2018}
+texts <- lapply(files_2018, pdf_text)
+texts <- unlist(lapply(texts, str_c, collapse = TRUE))
+infos <- lapply(files_2018, pdf_info)
+
+make_id <- function(files) {
+  str_extract(files, "([^/]+$)")
+}
+
+tidy_texts_2018 <- tibble(id = make_id(files_2018),
+                     file = files_2018,
+                     text = texts,
+                     pages = map_chr(infos, function(info) {info$pages}))
+
+papers_words <- tidy_texts_2018 %>%
+  select(file, text) %>%
+  unnest_tokens(word, text)
+
+suppressWarnings({
+  no_numbers <- papers_words %>%
+    filter(is.na(as.numeric(word)))
+})
+
+no_stop_words_2018 <- no_numbers %>%
+  anti_join(all_stop_words, by = "word") %>%
+  mutate(id = make_id(file))
+
+# https://github.com/juliasilge/tidytext/issues/17
+no_stop_stems_2018 <- no_stop_words_2018 %>%
+  mutate(word_stem = wordStem(word))
+```
+
+About `r round(nrow(no_stop_words_2018)/nrow(papers_words) * 100)` % of the words are considered stop words.
+There are `r length(unique(no_stop_stems_2018$word_stem))` unique word stems of `r length(unique(no_stop_words_2018$word))` words.
+
+_How many non-stop words does each document have?_
+
+```{r stop_words_2018}
+no_stop_words_2018 %>%
+  group_by(id) %>%
+  summarise(words = n()) %>%
+  arrange(desc(words))
+```
+
+### Text analysis
+
+_How often do the following terms on reproducible research appear in each paper?_
+
+The detection matches full words using regex option `\b`.
+
+- reproduc (`reproduc.*`, reproducibility, reproducible, reproduce, reproduction)
+- replic (`replicat.*`, i.e. replication, replicate)
+- repeatab (`repeatab.*`, i.e. repeatability, repeatable)
+- software
+- (pseudo) code/script(s) [column name _code_]
+- algorithm (`algorithm.*`, i.e. algorithms, algorithmic)
+- process (`process.*`, i.e. processing, processes, preprocessing)
+- data (`data.*`, i.e. dataset(s), database(s))
+- result(s)
+- repository(ies)
+
+```{r keywords_per_paper_2018}
+tidy_texts_2018_lower <- str_to_lower(tidy_texts_2018$text)
+word_counts <- tibble(
+  id = tidy_texts_2018$id,
+  `reproduc..` = str_count(tidy_texts_2018_lower, "\\breproduc.*\\b"),
+  `replic..` = str_count(tidy_texts_2018_lower, "\\breplicat.*\\b"),
+  `repeatab..` = str_count(tidy_texts_2018_lower, "\\brepeatab.*\\b"),
+  `code` = str_count(tidy_texts_2018_lower, "(\\bcode\\b|\\bscript.*\\b|\\bpseudo\ code\\b)"),
+  `software` = str_count(tidy_texts_2018_lower, "\\bsoftware\\b"),
+  `algorithm(s)` = str_count(tidy_texts_2018_lower, "\\balgorithm.*\\b"),
+  `(pre)process..` = str_count(tidy_texts_2018_lower, "(\\bprocess.*\\b|\\bpreprocess.*\\b|\\bpre-process.*\\b)"),
+  `data.*` = str_count(tidy_texts_2018_lower, "\\bdata.*\\b"),
+  `result(s)` = str_count(tidy_texts_2018_lower, "\\bresults?\\b"),
+  `repository/ies` = str_count(tidy_texts_2018_lower, "\\brepositor(y|ies)\\b")
+) %>%
+  mutate(all = rowSums(.[-1]))
+
+word_counts_sums_total_2018 <- word_counts %>% 
+  summarise_if(is.numeric, funs(sum)) %>%
+  add_column(id = "Total", .before = 0)
+rbind(word_counts, word_counts_sums_total_2018)
+```
+
+_What are top used words (not stems)?_
+
+```{r top_words_2018}
+countPapersUsingWord <- function(the_word) {
+  sapply(the_word, function(w) {
+    no_stop_words_2018 %>%
+      filter(word == w) %>%
+      group_by(id) %>%
+      count %>%
+      nrow
+  })
+}
+
+top_words_2018 <- no_stop_words_2018 %>%
+  group_by(word) %>%
+  tally %>%
+  arrange(desc(n)) %>%
+  head(20) %>%
+  mutate(`# papers` = countPapersUsingWord(word)) %>%
+  add_column(place = c(1:nrow(.)), .before = 0)
+
+top_words_2018
+```
+
+_What are the top word stems?_
+
+```{r top_stems_2018}
+countPapersUsingStem <- function(the_stem) {
+  sapply(the_stem, function(s) {
+    no_stop_stems_2018 %>%
+      filter(word_stem == s) %>%
+      group_by(id) %>%
+      count %>%
+      nrow
+  })
+}
+
+top_stems_2018 <- no_stop_stems_2018 %>%
+  group_by(word_stem) %>%
+  tally %>%
+  arrange(desc(n)) %>%
+  head(20) %>%
+  mutate(`# papers` = countPapersUsingStem(word_stem)) %>%
+  add_column(place = c(1:nrow(.)), .before = 0)
+
+top_stems_2018
+```
+
+### Word cloud based on word stems
+
+```{r plot_function}
+wordStemPlot <- function(word_stem_data, top_stem_data, year, minimum_occurence, fp_count, op_count) {
+
+  cloud_words <- word_stem_data %>%
+    group_by(word_stem) %>%
+    tally %>%
+    filter(n >= minimum_occurence) %>%
+    arrange(desc(n))
+  
+  def.par <- par(no.readonly = TRUE)
+  par(mar = rep(0,4))
+  layout(mat = matrix(data = c(1,2,3,4), nrow = 2, ncol = 2, byrow = TRUE),
+         widths = c(lcm(8),lcm(8)),
+         heights = c(lcm(2),lcm(11)))
+  #       -> nf
+  #layout.show(nf)
+  
+  plot.new()
+  text(0.5, 0.5, paste0("Word stem cloud of AGILE ", year, " Submissions"), font = 2)
+  text(0.5, 0.15, paste0("Based on ", fp_count, " full papers and ", op_count, " short papers/posters.\n",
+                        "Showing ", nrow(cloud_words), " of ", sum(cloud_words$n),
+                        " word stems occuring at least ", minimum_occurence, " times."), font = 1, cex = 0.7)
+  plot.new()
+  text(0.5, 0.5, paste0("Top word stems of AGILE ", year, " Submissions"), font = 2)
+  text(0.5, 0.15, paste0("Code available at https://github.com/nuest/\nreproducible-research-and-giscience"), font = 1, cex = 0.7)
+  
+  wordcloud(cloud_words$word_stem, cloud_words$n,
+            max.words = Inf,
+            random.order = FALSE,
+            fixed.asp = FALSE,
+            rot.per = 0,
+            color = brewer.pal(8,"Dark2"))
+  
+  frame() # thx to https://stackoverflow.com/a/25194694/261210
+  vps <- baseViewports()
+  pushViewport(vps$inner, vps$figure, vps$plot)
+  grid.table(as.matrix(top_stem_data),
+             theme = ttheme_minimal(base_size = 11,
+                                    padding = unit(c(10,5), "pt"))
+             )
+  popViewport(3)
+  par(def.par)
+}
+```
+
+```{r plot_2018,dpi=600,fig.width=7,fig.asp=0.85}
+# minimum occurence manually tested so that all words could be plotted
+wordStemPlot(no_stop_stems_2018, top_stems_2018, "2018", 200, full_papers_2018, other_papers_2018)
+```
+
+--------
+
+## 2019
+
+### Loading and cleaning
+
+```{r load_filenames_2019}
+files_2019 <- dir(path = here::here(data_path, "2019"), pattern = ".pdf$", full.names = TRUE)
+```
+
+This analysis was created with the following `r length(files_2019)` documents:
+
+```{r list_files_2019,echo=FALSE}
+# remove base name
+sapply(X = files_2019, FUN = stringr::str_remove, USE.NAMES = FALSE, pattern = here::here(data_path, "2019"))
+```
+
+Count the types of submissions:
+
+```{r manuscript_counts_2019}
+full_papers_2019 <- length(str_match(files_2019, "10.100")[!is.na(str_match(files_2019, "10.100"))])
+other_papers_2019 <- length(str_match(files_2019, "10.100")[is.na(str_match(files_2019, "10.100"))])
+```
+
+Read the data from PDFs and preprocess to create a [tidy](https://www.jstatsoft.org/article/view/v059i10) data structure without [stop words](https://en.wikipedia.org/wiki/Stop_words):
+
+```{r tidy_data_2019}
+texts <- lapply(files_2019, pdf_text)
+texts <- unlist(lapply(texts, str_c, collapse = TRUE))
+infos <- lapply(files_2019, pdf_info)
+
+tidy_texts_2019 <- tibble(id = make_id(files_2019),
+                     file = files_2019,
+                     text = texts,
+                     pages = map_chr(infos, function(info) {info$pages}))
+
+papers_words <- tidy_texts_2019 %>%
+  select(file, text) %>%
+  unnest_tokens(word, text)
+
+suppressWarnings({
+  no_numbers <- papers_words %>%
+    filter(is.na(as.numeric(word)))
+})
+
+no_stop_words_2019 <- no_numbers %>%
+  anti_join(all_stop_words, by = "word") %>%
+  mutate(id = make_id(file))
+
+# https://github.com/juliasilge/tidytext/issues/17
+no_stop_stems_2019 <- no_stop_words_2019 %>%
+  mutate(word_stem = wordStem(word))
+```
+
+About `r round(nrow(no_stop_words_2019)/nrow(papers_words) * 100)` % of the words are considered stop words.
+There are `r length(unique(no_stop_stems_2019$word_stem))` unique word stems of `r length(unique(no_stop_words_2019$word))` words.
+
+**Note:** In the original paper corpus there was an issue with reading in one paper, which only had 1 word, `10.1007@978-3-030-14745-710.pdf`.
+Since it was not possible to copy or extract text, it was send through an OCR process (using [OCRmyPDF](https://github.com/jbarlow83/OCRmyPDF)) and the original file renamed to `10.1007@978-3-030-14745-710__pdf`:
+
+```{bash ocr_2019,eval=FALSE}
+docker run -v $(pwd)/all-manuscripts/2019:/home/docker -it jbarlow83/ocrmypdf --force-ocr 10.1007@978-3-030-14745-710.pdf 10.1007@978-3-030-14745-710_ocr.pdf
+mv all-manuscripts/2019/10.1007@978-3-030-14745-710.pdf all-manuscripts/2019/10.1007@978-3-030-14745-710pdf.orig
+```
+
+_How many non-stop words does each document have?_
+
+```{r stop_words_2019}
+no_stop_words_2019 %>%
+  group_by(id) %>%
+  summarise(words = n()) %>%
+  arrange(desc(words))
+```
+
+### Text analysis
+
+_How often do the following terms on reproducible research appear in each paper?_
+
+The detection matches full words using regex option `\b`.
+
+- reproduc (`reproduc.*`, reproducibility, reproducible, reproduce, reproduction)
+- replic (`replicat.*`, i.e. replication, replicate)
+- repeatab (`repeatab.*`, i.e. repeatability, repeatable)
+- software
+- (pseudo) code/script(s) [column name _code_]
+- algorithm (`algorithm.*`, i.e. algorithms, algorithmic)
+- process (`process.*`, i.e. processing, processes, preprocessing)
+- data (`data.*`, i.e. dataset(s), database(s))
+- result(s)
+- repository(ies)
+
+```{r keywords_per_paper_2019}
+tidy_texts_2019_lower <- str_to_lower(tidy_texts_2019$text)
+word_counts <- tibble(
+  id = tidy_texts_2019$id,
+  `reproduc..` = str_count(tidy_texts_2019_lower, "\\breproduc.*\\b"),
+  `replic..` = str_count(tidy_texts_2019_lower, "\\breplicat.*\\b"),
+  `repeatab..` = str_count(tidy_texts_2019_lower, "\\brepeatab.*\\b"),
+  `code` = str_count(tidy_texts_2019_lower, "(\\bcode\\b|\\bscript.*\\b|\\bpseudo\ code\\b)"),
+  `software` = str_count(tidy_texts_2019_lower, "\\bsoftware\\b"),
+  `algorithm(s)` = str_count(tidy_texts_2019_lower, "\\balgorithm.*\\b"),
+  `(pre)process..` = str_count(tidy_texts_2019_lower, "(\\bprocess.*\\b|\\bpreprocess.*\\b|\\bpre-process.*\\b)"),
+  `data.*` = str_count(tidy_texts_2019_lower, "\\bdata.*\\b"),
+  `result(s)` = str_count(tidy_texts_2019_lower, "\\bresults?\\b"),
+  `repository/ies` = str_count(tidy_texts_2019_lower, "\\brepositor(y|ies)\\b")
+) %>%
+  mutate(all = rowSums(.[-1]))
+
+word_counts_sums_total_2019 <- word_counts %>% 
+  summarise_if(is.numeric, funs(sum)) %>%
+  add_column(id = "Total", .before = 0)
+
+rbind(word_counts, word_counts_sums_total_2019)
+```
+
+_What are top used words (not stems)?_
+
+```{r top_words_2019}
+countPapersUsingWord <- function(the_word) {
+  sapply(the_word, function(w) {
+    no_stop_words_2019 %>%
+      filter(word == w) %>%
+      group_by(id) %>%
+      count %>%
+      nrow
+  })
+}
+
+top_words_2019 <- no_stop_words_2019 %>%
+  group_by(word) %>%
+  tally %>%
+  arrange(desc(n)) %>%
+  head(20) %>%
+  mutate(`# papers` = countPapersUsingWord(word)) %>%
+  add_column(place = c(1:nrow(.)), .before = 0)
+
+top_words_2019
+```
+
+_What are the top word stems?_
+
+```{r top_stems_2019}
+countPapersUsingStem <- function(the_stem) {
+  sapply(the_stem, function(s) {
+    no_stop_stems_2019 %>%
+      filter(word_stem == s) %>%
+      group_by(id) %>%
+      count %>%
+      nrow
+  })
+}
+
+top_stems_2019 <- no_stop_stems_2019 %>%
+  group_by(word_stem) %>%
+  tally %>%
+  arrange(desc(n)) %>%
+  head(20) %>%
+  mutate(`# papers` = countPapersUsingStem(word_stem)) %>%
+  add_column(place = c(1:nrow(.)), .before = 0)
+
+top_stems_2019
+```
+
+### Word cloud based on word stems
+
+```{r plot_2019,dpi=600,fig.width=7,fig.asp=0.85}
+# minimum occurence manually tested so that all words could be plotted
+wordStemPlot(no_stop_stems_2019, top_stems_2019, "2019", 145, full_papers_2019, other_papers_2019)
+```
+
+## Reproducibility keywords per year - absolute
+
+```{r keywords_per_year_abs}
+keywords_2018 <- word_counts_sums_total_2018
+keywords_2019 <- word_counts_sums_total_2018
+
+names(keywords_2018)[[1]] <- names(keywords_2019)[[1]] <- "year"
+keywords_2018$year <- 2018
+keywords_2019$year <- 2019
+
+rbind(keywords_2018, keywords_2019)
+```
+
+## Reproducibility keywords per year - per paper
+
+```{r keywords_per_year_per_paper}
+round(rbind(
+  dplyr::bind_cols("year" = 2018, keywords_2018[-(1)] / (full_papers_2018 + other_papers_2018)),
+  dplyr::bind_cols("year" = 2019, keywords_2019[-(1)] / (full_papers_2019 + other_papers_2019))
+), digits = 2)
+```
+
+## Reproducibility keywords per year - per 1000 words
+
+```{r keywords_per_year_per_word}
+round(rbind(
+  dplyr::bind_cols("year" = 2018, keywords_2018[-(1)] / nrow(no_stop_words_2018) * 1000),
+  dplyr::bind_cols("year" = 2019, keywords_2019[-(1)] / nrow(no_stop_words_2019) * 1000)
+), digits = 2)
+```
+
+--------
+
+## License
+
+This document is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
+
+All contained code is licensed under the [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/).
+
+## Metadata
+
+```{r session_info}
+devtools::session_info(include_base = TRUE)
+```

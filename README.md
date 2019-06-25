@@ -81,6 +81,7 @@ repo2docker --ref 6 -e SPRINGER_API_KEY=<your key> https://github.com/nuest/repr
 - `agile-rr-paper-corpus.pdf`: A PDF rendering or he analysis document for viewing.
 - `Dockerfile`: A recipe for the computational environment using [Docker](https://en.wikipedia.org/wiki/Docker_(software)).
 - `install.R`: R script file executed during creation of the Docker image to install required dependencies.
+- `agile-rr-yearly-textanalysis.Rmd`: R Markdown notebook for text analysis of all AGILE submissions, online available at [https://rpubs.com/nuest/reproducible-agile-text-analysis](https://rpubs.com/nuest/reproducible-agile-text-analysis)
 
 ## Deposition on Zenodo
 

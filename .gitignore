@@ -28,3 +28,7 @@ paper-corpus/
 agile-rr-paper-corpus_files/
 agile-rr-paper-corpus\.tex
 .Renviron
+
+all-manuscripts/
+
+*.html
