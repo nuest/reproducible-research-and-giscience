@@ -525,11 +525,11 @@ wordStemPlot(no_stop_stems_2019, top_stems_2019, "2019", 145, full_papers_2019, 
 
 ```{r keywords_per_year_abs}
 keywords_2018 <- word_counts_sums_total_2018
-keywords_2019 <- word_counts_sums_total_2018
+keywords_2019 <- word_counts_sums_total_2019
 
 names(keywords_2018)[[1]] <- names(keywords_2019)[[1]] <- "year"
-keywords_2018$year <- 2018
-keywords_2019$year <- 2019
+keywords_2018$year <- "2018"
+keywords_2019$year <- "2019"
 
 rbind(keywords_2018, keywords_2019)
 ```
@@ -537,19 +537,23 @@ rbind(keywords_2018, keywords_2019)
 ## Reproducibility keywords per year - per paper
 
 ```{r keywords_per_year_per_paper}
-round(rbind(
-  dplyr::bind_cols("year" = 2018, keywords_2018[-(1)] / (full_papers_2018 + other_papers_2018)),
-  dplyr::bind_cols("year" = 2019, keywords_2019[-(1)] / (full_papers_2019 + other_papers_2019))
-), digits = 2)
+cbind(year = c("2018", "2019"),
+      round(rbind(
+        dplyr::bind_cols(keywords_2018[-(1)] / (full_papers_2018 + other_papers_2018)),
+        dplyr::bind_cols(keywords_2019[-(1)] / (full_papers_2019 + other_papers_2019))
+        ), digits = 2)
+)
 ```
 
 ## Reproducibility keywords per year - per 1000 words
 
 ```{r keywords_per_year_per_word}
-round(rbind(
-  dplyr::bind_cols("year" = 2018, keywords_2018[-(1)] / nrow(no_stop_words_2018) * 1000),
-  dplyr::bind_cols("year" = 2019, keywords_2019[-(1)] / nrow(no_stop_words_2019) * 1000)
-), digits = 2)
+cbind(year = c("2018", "2019"),
+      round(rbind(
+        dplyr::bind_cols(keywords_2018[-(1)] / nrow(no_stop_words_2018) * 1000),
+        dplyr::bind_cols(keywords_2019[-(1)] / nrow(no_stop_words_2019) * 1000)
+        ), digits = 2)
+)
 ```
 
 --------
